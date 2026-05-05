@@ -1,0 +1,206 @@
+import { GenderType } from "./teacher.types";
+
+// status types (union instead of enum)
+export type VacancyStatus =
+  | "open"
+  | "assigned"
+  | "completed"
+  | "ongoing"
+  | "cancelled";
+
+export type PaymentStatus =
+  | "pending"
+  | "partial"
+  | "completed"
+  | "failed";
+
+export type VacancyStats = {
+  total_vacancies: number;
+  open_vacancies: number;
+  assigned_vacancies: number;
+  ongoing_vacancies: number;
+  completed_vacancies: number;
+  cancelled_vacancies: number;
+  pending_payments: number;
+  partial_payments: number;
+  completed_payments: number;
+  failed_payments: number;
+};
+
+export type VacancyQuery = {
+  limit?: number;
+  page?: number;
+  search?: string;
+  location?: string;
+  contact_number?: string;
+  status?: string;
+  payment_status?: string;
+  gender?: string;
+  lat?: number;
+  lon?: number;
+};
+
+export const pickVacancyQuery = (query: VacancyQuery): VacancyQuery => ({
+  limit: Number(query.limit ?? 20),
+  page: Number(query.page ?? 0),
+  search: String(query.search ?? ""),
+  location: String(query.location ?? ""),
+  contact_number: String(query.contact_number ?? ""),
+  status: String(query.status ?? ""),
+  payment_status: String(query.payment_status ?? ""),
+  gender: String(query.gender ?? ""),
+  lat: query.lat,
+  lon: query.lon,
+});
+
+// base vacancy
+export type Vacancy = {
+  id: string;
+  title: string;
+  subject: string;
+  gender : GenderType
+  location: string;
+  location_hint: string;
+  lat: number;
+  lon: number;
+  no_of_students: number;
+  grade: string;
+  salary: number;
+  status: VacancyStatus;
+  time: string;
+  code: string;
+  contact_number: string;
+  salary_note: string;
+  commission_charge: number;
+  approved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// list response
+export type VacancyListResponseType = {
+  id: string;
+  title: string;
+  subject: string;
+  gender : GenderType
+  location: string;
+  location_hint: string;
+  lat: number;
+  lon: number;
+  no_of_students: number;
+  grade: string;
+  salary: number;
+  status: VacancyStatus;
+  time: string;
+  code: string;
+  contact_number: string;
+  salary_note: string;
+  commission_charge: number;
+  approved_at?: string | null;
+  assigned_to?: string | null;
+
+  payment_status: PaymentStatus;
+  amount_to_be_paid: number;
+
+  created_at: string;
+  updated_at: string;
+};
+
+// by id
+export type VacancyTypeById = {
+  id: string;
+  title: string;
+  subject: string;
+  gender : GenderType
+  location: string;
+  location_hint: string;
+  lat: number;
+  lon: number;
+  no_of_students: number;
+  grade: string;
+  salary: number;
+  status: VacancyStatus;
+  time: string;
+  code: string;
+  contact_number: string;
+  salary_note: string;
+  commission_charge: number;
+  approved_at?: string | null;
+
+  vacancy_id: string;
+  assigned_to?: string | null;
+
+  payment_status: PaymentStatus;
+  amount_to_be_paid: number;
+  payment_done: number;
+  remaining_amount: number;
+
+  payment_created_date: string;
+  payment_updated_date: string;
+
+  created_at: string;
+  updated_at: string;
+};
+
+// create
+export type CreateVacancy = {
+  title: string;
+  subject: string;
+  gender : GenderType
+  location: string;
+  location_hint: string;
+  lat: number;
+  lon: number;
+  no_of_students: number;
+  grade: string;
+  salary: number;
+  status: VacancyStatus;
+  time: string;
+  contact_number: string;
+  salary_note: string;
+  commission_charge: number;
+};
+
+// update
+export type UpdateVacancy = {
+  id: string;
+  title: string;
+  subject: string;
+  gender : GenderType
+  location: string;
+  location_hint: string;
+  lat: number;
+  lon: number;
+  no_of_students: number;
+  grade: string;
+  salary: number;
+  status: VacancyStatus;
+  time: string;
+  contact_number: string;
+  salary_note: string;
+  commission_charge: number;
+};
+
+// payment
+export type VacancyPayment = {
+  id: string;
+  vacancy_id: string;
+  assigned_to?: string | null;
+
+  payment_status: PaymentStatus;
+
+  amount_to_be_paid: number;
+  payment_done: number;
+  remaining_amount: number;
+
+  created_at: string;
+  updated_at: string;
+};
+
+export type VacancyListResponse = {
+  vacancies: VacancyListResponseType[];
+  total: number;
+  has_more: boolean;
+  next_offset: number;
+  vacancy_data: VacancyStats;
+};
