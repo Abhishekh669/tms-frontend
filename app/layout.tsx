@@ -28,9 +28,6 @@ export const metadata: Metadata = {
     "qualified teachers",
     "home education"
   ],
-  authors: [{ name: "Abhishekh Group" }],
-  creator: "Abhishekh Group",
-  publisher: "Abhishekh Group",
   robots: {
     index: true,
     follow: true,
