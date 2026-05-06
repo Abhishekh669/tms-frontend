@@ -1920,7 +1920,7 @@ export default function VacancyIdPage({ user }: { user: UserType }) {
                     </span>
                   </p>
 
-                  {/* Metrics */}
+                  {/* Metrics is good */}
                   <div className="grid grid-cols-3 gap-3 mb-4">
                     <div className="rounded-xl bg-muted/60 p-3">
                       <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Amount To Be Paid</p>
