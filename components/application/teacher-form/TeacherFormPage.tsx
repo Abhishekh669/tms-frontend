@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { removeMultipleImages } from "@/utils/action/uploadthing/delete.image";
+import { useRouter } from "next/navigation";
 
 const MapPicker = dynamic(() => import("./MapPicker"), { ssr: false });
 
@@ -262,6 +263,7 @@ export default function TeacherFormPage() {
   >([]);
   const locationDebounceRef = useRef<number | null>(null);
   const locationDropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // File state — File objects are never stored in sessionStorage
   const [cvFile, setCvFile] = useState<File | null>(null);
@@ -555,6 +557,7 @@ export default function TeacherFormPage() {
       uploadedUrlsRef.current = {};
       setShowMap(false);
       toast.success("Registration submitted successfully!");
+      router.replace("/")
     } catch (error) {
       // Clean up any files uploaded during this attempt
       if (freshlyUploadedUrls.length) {
