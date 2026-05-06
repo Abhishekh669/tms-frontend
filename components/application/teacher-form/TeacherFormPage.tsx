@@ -975,7 +975,7 @@ export default function TeacherFormPage() {
             </FieldGroup>
           </StepSection>
 
-          {/* ── Footer Buttons ── */}
+          {/* ── Footer Buttons okie ── */}
           <div className="pt-2 pb-10 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
             <div className="flex gap-2 sm:gap-2">
               <Button
