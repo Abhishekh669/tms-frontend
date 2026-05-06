@@ -1923,7 +1923,7 @@ export default function VacancyIdPage({ user }: { user: UserType }) {
                   {/* Metrics */}
                   <div className="grid grid-cols-3 gap-3 mb-4">
                     <div className="rounded-xl bg-muted/60 p-3">
-                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Amount due</p>
+                      <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Amount To Be Paid</p>
                       <p className="text-base font-semibold text-foreground">NPR {vacancy.amount_to_be_paid.toLocaleString()}</p>
                     </div>
                     <div className="rounded-xl bg-emerald-500/10 p-3">
