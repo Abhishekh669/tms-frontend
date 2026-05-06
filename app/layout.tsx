@@ -13,17 +13,37 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Ghar mai Sikshya - Teacher Recruitment Platform",
-  description: "Find qualified teachers for your home tuition needs. Built with care by Abhishekh Group.",
-  keywords: ["teacher", "recruitment", "home tuition", "education", "Nepal"],
+  title: "Ghar mai Sikshya - Best Home Tuition & Teacher Recruitment Platform",
+  description:
+    "Find qualified home tuition teachers in your area. Ghar mai Sikshya connects parents with experienced tutors for personalized home tuition. Best platform for teacher recruitment and home tutoring services.",
+  keywords: [
+    "home tuition",
+    "home tutor",
+    "teacher recruitment",
+    "tuition teacher",
+    "private tutor",
+    "home tutoring services",
+    "ghar mai tuition",
+    "tuition classes",
+    "qualified teachers",
+    "home education"
+  ],
   authors: [{ name: "Abhishekh Group" }],
-  openGraph: {
-    title: "Ghar mai Sikshya - Teacher Recruitment Platform",
-    description: "Find qualified teachers for your home tuition needs",
-    type: "website",
+  creator: "Abhishekh Group",
+  publisher: "Abhishekh Group",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
   },
+  applicationName: "Ghar mai Sikshya",
 };
-
 export default function RootLayout({
   children,
 }: Readonly<{

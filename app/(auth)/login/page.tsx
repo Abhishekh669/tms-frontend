@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation';
 
 async function page() {
     const session = await auth();
-    console.log("this is the session : ", session)
     if (session) {
         redirect("/dashboard")
     }

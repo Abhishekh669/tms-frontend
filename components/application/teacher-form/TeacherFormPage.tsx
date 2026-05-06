@@ -5,13 +5,6 @@ import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,7 +21,6 @@ import {
   FileImage,
   Loader2,
   User,
-  Mail,
   Phone,
   GraduationCap,
   X,
@@ -37,6 +29,9 @@ import {
   Check,
   VenusAndMars,
   AlertCircle,
+  Mail,
+  RotateCcw,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadThing } from "@/utils/uploadthing/uploadthing.client";
@@ -61,20 +56,13 @@ const teacherSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   phone: z
     .string()
-    .min(10, "Please enter a valid phone number — we will contact you through it")
-    .regex(
-      /^[0-9+\-\s()]+$/,
-      "Please enter a valid phone number — we will contact you through it"
-    ),
+    .min(10, "Please enter a valid phone number")
+    .regex(/^[0-9+\-\s()]+$/, "Please enter a valid phone number"),
   gender: z.enum(["male", "female", "other"], {
     required_error: "Please select your gender",
   }),
-  location: z
-    .string()
-    .min(3, "Please enter a valid location so we can reach you when a tuition is near you"),
-  location_hint: z
-    .string()
-    .min(3, "Please add a location hint so we can reach you when a tuition is near you"),
+  location: z.string().min(3, "Please enter a valid location"),
+  location_hint: z.string().min(3, "Please add a location hint"),
   lat: z.number({ invalid_type_error: "Latitude is required" }).optional(),
   long: z.number({ invalid_type_error: "Longitude is required" }).optional(),
   cv_file: z
@@ -109,7 +97,13 @@ export interface TeacherPayload {
   long?: number;
 }
 
-// ─── File Drop Zone (unchanged but included for completeness) ────────────────
+// ─── Storage keys ─────────────────────────────────────────────────────────────
+// NOTE: We never store File objects in sessionStorage (they can't be serialized).
+// We only store text fields + base64 previews separately.
+const STORAGE_KEY = "teacher-form-draft";
+const PREVIEWS_KEY = "teacher-form-previews";
+
+// ─── File Drop Zone ───────────────────────────────────────────────────────────
 interface FileDropZoneProps {
   label: string;
   hint: string;
@@ -145,11 +139,11 @@ function FileDropZone({
 
   return (
     <Field data-invalid={invalid}>
-      <FieldLabel className="text-xs font-medium text-foreground dark:text-white">
+      <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50 mb-1.5">
         {label}
         {optional && (
-          <span className="ml-1.5 text-[11px] font-normal text-muted-foreground dark:text-gray-400">
-            (optional)
+          <span className="ml-2 normal-case tracking-normal font-normal text-[11px] text-muted-foreground">
+            optional
           </span>
         )}
       </FieldLabel>
@@ -158,57 +152,43 @@ function FileDropZone({
         onDragOver={(e) => e.preventDefault()}
         onClick={() => !disabled && inputRef.current?.click()}
         className={cn(
-          "relative rounded-xl border-2 border-dashed cursor-pointer overflow-hidden transition-all duration-200 group",
-          preview ? "h-40" : "h-28",
+          "relative rounded-xl border cursor-pointer overflow-hidden transition-all duration-200 group",
+          preview ? "h-36" : "h-24",
           disabled && "opacity-50 pointer-events-none",
           invalid
-            ? "border-destructive bg-destructive/5 dark:border-destructive dark:bg-destructive/10"
+            ? "border-destructive bg-destructive/5"
             : file
-            ? "border-blue-500 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-950/20"
-            : "border-border bg-background hover:border-blue-400 hover:bg-blue-50/40 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-blue-500 dark:hover:bg-blue-950/20"
+            ? "border-blue-500/40 bg-blue-50/40 dark:border-blue-500/30 dark:bg-blue-950/20"
+            : "border-border/60 bg-muted/30 hover:border-blue-400/60 hover:bg-blue-50/20 dark:border-white/10 dark:hover:border-blue-500/40"
         )}
       >
         {preview ? (
           <>
             <img src={preview} alt={label} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <span className="text-white text-xs font-medium tracking-wide">Replace file</span>
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <span className="text-white text-xs font-medium">Replace</span>
             </div>
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-              className="absolute top-2.5 right-2.5 w-7 h-7 bg-destructive rounded-full flex items-center justify-center text-white shadow-md hover:scale-110 transition-transform z-10"
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="absolute top-2 right-2 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-destructive transition-colors z-10"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
             </button>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-2.5 px-4 text-center">
-            <div
-              className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
-                invalid
-                  ? "bg-destructive/10 dark:bg-destructive/20"
-                  : "bg-muted group-hover:bg-blue-100 dark:bg-gray-800 dark:group-hover:bg-blue-900/30"
-              )}
-            >
-              <FileImage
-                className={cn(
-                  "w-5 h-5 transition-colors",
-                  invalid
-                    ? "text-destructive"
-                    : "text-muted-foreground group-hover:text-blue-600 dark:text-gray-500 dark:group-hover:text-blue-400"
-                )}
-              />
+          <div className="flex items-center justify-center h-full gap-3 px-4">
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+              invalid ? "bg-destructive/10" : "bg-background dark:bg-white/5"
+            )}>
+              <FileImage className={cn("w-4 h-4", invalid ? "text-destructive" : "text-muted-foreground group-hover:text-blue-500 transition-colors")} />
             </div>
             <div>
-              <p className="text-xs font-medium text-foreground dark:text-gray-200">
-                <span className="text-blue-600 dark:text-blue-400">Click to upload</span> or drag &amp; drop
+              <p className="text-xs font-medium text-foreground dark:text-white">
+                <span className="text-blue-600 dark:text-blue-400">Upload</span> or drag & drop
               </p>
-              <p className="text-[10px] text-muted-foreground dark:text-gray-500 mt-0.5">{hint}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{hint}</p>
             </div>
           </div>
         )}
@@ -218,10 +198,7 @@ function FileDropZone({
           accept="image/*"
           className="hidden"
           disabled={disabled}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) onSelect(f);
-          }}
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onSelect(f); }}
         />
       </div>
       {invalid && errors && errors.length > 0 && <FieldError errors={errors} />}
@@ -229,55 +206,52 @@ function FileDropZone({
   );
 }
 
-// ─── Section Card (unchanged) ────────────────────────────────────────────────
-function SectionCard({
+// ─── Step Section ─────────────────────────────────────────────────────────────
+function StepSection({
   step,
-  icon,
   title,
   description,
-  accentClass,
   children,
 }: {
   step: number;
-  icon: React.ReactNode;
   title: string;
   description?: string;
-  accentClass: string;
   children: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-2xl border border-border shadow-sm bg-card dark:bg-gray-900 dark:border-gray-800">
-      <CardHeader className="pb-4 pt-5 px-5 sm:px-6 border-b border-border dark:border-gray-800 bg-muted/50 dark:bg-gray-900/50">
-        <div className="flex items-center gap-3">
-          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0", accentClass)}>
-            {icon}
+    <div className="relative">
+      {/* Step indicator — sits outside to the left on sm+ */}
+      <div className="flex gap-4 sm:gap-5">
+        {/* Number badge */}
+        <div className="flex-shrink-0 flex flex-col items-center gap-1 pt-0.5">
+          <div className="w-7 h-7 rounded-full bg-foreground dark:bg-white text-background dark:text-black text-[11px] font-black flex items-center justify-center tabular-nums select-none">
+            {step}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <CardTitle className="text-sm font-semibold text-foreground dark:text-white">
-                {title}
-              </CardTitle>
-              <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full">
-                Step {step}
-              </span>
-            </div>
+          <div className="w-px flex-1 bg-border/50 dark:bg-white/10 mt-1" />
+        </div>
+
+        {/* Card content */}
+        <div className="flex-1 pb-6 min-w-0">
+          <div className="mb-4">
+            <h2 className="text-sm font-bold text-foreground dark:text-white tracking-tight">{title}</h2>
             {description && (
-              <CardDescription className="text-[11px] mt-0.5 text-muted-foreground dark:text-gray-400">
-                {description}
-              </CardDescription>
+              <p className="text-[11px] text-muted-foreground dark:text-white/40 mt-0.5 leading-relaxed">{description}</p>
             )}
           </div>
+          <div className="rounded-2xl border border-border/60 dark:border-white/8 bg-card dark:bg-white/[0.03] p-4 sm:p-5">
+            {children}
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="px-5 sm:px-6 pb-6 pt-5">{children}</CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
-// ─── Main Page with Persistence & Cleanup ────────────────────────────────────
-const STORAGE_KEY = "teacher-form-draft";
-const PREVIEWS_KEY = "teacher-form-previews";
+// ─── Input class ──────────────────────────────────────────────────────────────
+const inputCls =
+  "h-10 rounded-lg bg-background dark:bg-white/5 border-border/60 dark:border-white/10 text-foreground dark:text-white text-sm placeholder:text-muted-foreground/60 dark:placeholder:text-white/25 focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500 dark:focus-visible:ring-blue-400 dark:focus-visible:border-blue-400 transition-colors";
 
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function TeacherFormPage() {
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -287,8 +261,9 @@ export default function TeacherFormPage() {
     { label: string; lat: number; lon: number }[]
   >([]);
   const locationDebounceRef = useRef<number | null>(null);
+  const locationDropdownRef = useRef<HTMLDivElement>(null);
 
-  // File state
+  // File state — File objects are never stored in sessionStorage
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvPreview, setCvPreview] = useState("");
   const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
@@ -296,12 +271,8 @@ export default function TeacherFormPage() {
   const [additionFile, setAdditionFile] = useState<File | null>(null);
   const [additionPreview, setAdditionPreview] = useState("");
 
-  // Track uploaded URLs to clean up on error
-  const [uploadedUrls, setUploadedUrls] = useState<{
-    cv?: string;
-    transcript?: string;
-    addition?: string;
-  }>({});
+  // Track uploaded URLs for cleanup on error / replacement
+  const uploadedUrlsRef = useRef<{ cv?: string; transcript?: string; addition?: string }>({});
 
   const form = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherSchema),
@@ -317,42 +288,45 @@ export default function TeacherFormPage() {
     },
   });
 
-  // ─── Load persisted data on mount ─────────────────────────────────────────
+  // ─── Load persisted text data on mount ──────────────────────────────────
   useEffect(() => {
     const savedData = sessionStorage.getItem(STORAGE_KEY);
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        form.reset(parsed);
-      } catch (e) {}
+        // Only restore serializable (non-File) fields
+        const { name, email, phone, gender, location, location_hint, lat, long } = parsed;
+        form.reset({ name, email, phone, gender, location, location_hint, lat, long });
+      } catch (_) {}
     }
     const savedPreviews = sessionStorage.getItem(PREVIEWS_KEY);
     if (savedPreviews) {
       try {
         const { cv, transcript, addition } = JSON.parse(savedPreviews);
-        setCvPreview(cv || "");
-        setTranscriptPreview(transcript || "");
-        setAdditionPreview(addition || "");
-      } catch (e) {}
+        if (cv) setCvPreview(cv);
+        if (transcript) setTranscriptPreview(transcript);
+        if (addition) setAdditionPreview(addition);
+      } catch (_) {}
     }
-  }, [form]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── Persist form values and previews on change ──────────────────────────
+  // ─── Persist text fields on change (never persist File objects) ──────────
   useEffect(() => {
     const subscription = form.watch((values) => {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(values));
+      const { name, email, phone, gender, location, location_hint, lat, long } = values;
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ name, email, phone, gender, location, location_hint, lat, long })
+      );
     });
     return () => subscription.unsubscribe();
   }, [form]);
 
+  // ─── Persist previews (base64 strings are serializable) ─────────────────
   useEffect(() => {
     sessionStorage.setItem(
       PREVIEWS_KEY,
-      JSON.stringify({
-        cv: cvPreview,
-        transcript: transcriptPreview,
-        addition: additionPreview,
-      })
+      JSON.stringify({ cv: cvPreview, transcript: transcriptPreview, addition: additionPreview })
     );
   }, [cvPreview, transcriptPreview, additionPreview]);
 
@@ -361,51 +335,47 @@ export default function TeacherFormPage() {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (form.formState.isDirty) {
         e.preventDefault();
-        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+        e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [form.formState.isDirty]);
 
-  // ─── Cleanup uploaded files from server ──────────────────────────────────
-  const cleanupUploadedImages = async () => {
-    const urlsToDelete = Object.values(uploadedUrls).filter(Boolean) as string[];
-    if (urlsToDelete.length) {
-      await removeMultipleImages(urlsToDelete);
-      setUploadedUrls({});
+  // ─── Close location dropdown on outside click ────────────────────────────
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target as Node)) {
+        setLocationOptions([]);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // ─── Cleanup uploaded images from server ─────────────────────────────────
+  const cleanupUploadedImages = async (urls?: string[]) => {
+    const toDelete =
+      urls ?? (Object.values(uploadedUrlsRef.current).filter(Boolean) as string[]);
+    if (toDelete.length) {
+      await removeMultipleImages(toDelete);
+      uploadedUrlsRef.current = {};
     }
   };
 
-  // ─── Clear all data (reset form and storage) ────────────────────────────
+  // ─── Full clear ──────────────────────────────────────────────────────────
   const handleClearAll = async () => {
-    // Delete any uploaded files from server first
     await cleanupUploadedImages();
-    // Reset local file states
-    setCvFile(null);
-    setCvPreview("");
-    setTranscriptFile(null);
-    setTranscriptPreview("");
-    setAdditionFile(null);
-    setAdditionPreview("");
-    // Reset form
-    form.reset({
-      name: "",
-      email: "",
-      phone: "",
-      gender: undefined,
-      location: "",
-      location_hint: "",
-      lat: undefined,
-      long: undefined,
-    });
-    // Clear storage
+    setCvFile(null); setCvPreview("");
+    setTranscriptFile(null); setTranscriptPreview("");
+    setAdditionFile(null); setAdditionPreview("");
+    form.reset({ name: "", email: "", phone: "", gender: undefined, location: "", location_hint: "", lat: undefined, long: undefined });
     sessionStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(PREVIEWS_KEY);
     toast.success("All data cleared");
   };
 
-  // ─── File handlers with orphan cleanup ───────────────────────────────────
+  // ─── File utils ──────────────────────────────────────────────────────────
   const makePreview = (file: File): Promise<string> =>
     new Promise((resolve) => {
       const r = new FileReader();
@@ -420,10 +390,11 @@ export default function TeacherFormPage() {
     setPreview: (p: string) => void,
     urlKey: "cv" | "transcript" | "addition"
   ) => {
-    // If there was a previously uploaded URL for this field, delete it (orphan prevention)
-    if (uploadedUrls[urlKey]) {
-      await removeMultipleImages([uploadedUrls[urlKey]!]);
-      setUploadedUrls((prev) => ({ ...prev, [urlKey]: undefined }));
+    // Delete previously uploaded URL for this slot (orphan prevention)
+    const prev = uploadedUrlsRef.current[urlKey];
+    if (prev) {
+      await removeMultipleImages([prev]);
+      uploadedUrlsRef.current = { ...uploadedUrlsRef.current, [urlKey]: undefined };
     }
     setFile(file);
     form.setValue(field, file, { shouldValidate: true });
@@ -436,9 +407,10 @@ export default function TeacherFormPage() {
     setPreview: (p: string) => void,
     urlKey: "cv" | "transcript" | "addition"
   ) => {
-    if (uploadedUrls[urlKey]) {
-      await removeMultipleImages([uploadedUrls[urlKey]!]);
-      setUploadedUrls((prev) => ({ ...prev, [urlKey]: undefined }));
+    const prev = uploadedUrlsRef.current[urlKey];
+    if (prev) {
+      await removeMultipleImages([prev]);
+      uploadedUrlsRef.current = { ...uploadedUrlsRef.current, [urlKey]: undefined };
     }
     setFile(null);
     setPreview("");
@@ -448,7 +420,7 @@ export default function TeacherFormPage() {
   // ─── Location helpers ────────────────────────────────────────────────────
   const handleUseMyLocation = () => {
     if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported by your browser");
+      toast.error("Geolocation is not supported");
       return;
     }
     setLocating(true);
@@ -468,17 +440,12 @@ export default function TeacherFormPage() {
           );
           toast.success("Location detected");
         } catch {
-          form.setValue("location", `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`, {
-            shouldValidate: true,
-          });
+          form.setValue("location", `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`, { shouldValidate: true });
         } finally {
           setLocating(false);
         }
       },
-      (err) => {
-        setLocating(false);
-        toast.error("Could not get location: " + err.message);
-      }
+      (err) => { setLocating(false); toast.error("Could not get location: " + err.message); }
     );
   };
 
@@ -499,55 +466,67 @@ export default function TeacherFormPage() {
   };
 
   const { startUpload } = useUploadThing("imageUploader", {
-    onClientUploadComplete: (res) => {
-      console.log("Upload successful:", res);
-    },
     onUploadError: (error) => {
-      console.error("Upload error:", error);
       toast.error(`Upload failed: ${error.message}`);
     },
   });
 
-  // ─── Form submission with cleanup on failure ────────────────────────────
+  // ─── Location autocomplete ────────────────────────────────────────────────
+  const locationVal = form.watch("location");
+  useEffect(() => {
+    const q = String(locationVal ?? "").trim();
+    if (q.length < 3) { setLocationOptions([]); return; }
+    if (locationDebounceRef.current) window.clearTimeout(locationDebounceRef.current);
+    locationDebounceRef.current = window.setTimeout(async () => {
+      try {
+        setLocationPicking(true);
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&addressdetails=0`
+        );
+        const list = (await res.json()) as Array<{ display_name?: string; lat?: string; lon?: string }>;
+        setLocationOptions(
+          list
+            .map((x) => ({ label: String(x.display_name ?? "").trim(), lat: Number(x.lat), lon: Number(x.lon) }))
+            .filter((x) => x.label && Number.isFinite(x.lat) && Number.isFinite(x.lon))
+            .slice(0, 6)
+        );
+      } catch { setLocationOptions([]); }
+      finally { setLocationPicking(false); }
+    }, 350);
+    return () => { if (locationDebounceRef.current) window.clearTimeout(locationDebounceRef.current); };
+  }, [locationVal]);
+
+  // ─── Submit ──────────────────────────────────────────────────────────────
   const onSubmit = async (values: TeacherFormValues) => {
     setSaving(true);
-    let uploadedUrlsToCleanup: string[] = [];
+    let freshlyUploadedUrls: string[] = [];
 
     try {
-      // Prepare files for upload
       const filesWithMeta = [
         { file: values.cv_file, key: "cv" },
         { file: values.transcript_file, key: "transcript" },
         ...(values.addition_file ? [{ file: values.addition_file, key: "addition" }] : []),
       ];
 
-      toast.loading("Uploading your documents...");
+      const uploadToast = toast.loading("Uploading documents…");
       const uploadResults = await startUpload(filesWithMeta.map((f) => f.file));
-      toast.dismiss();
+      toast.dismiss(uploadToast);
 
-      if (!uploadResults || uploadResults.length === 0) {
-        throw new Error("No files were uploaded.");
-      }
-      if (uploadResults.length !== filesWithMeta.length) {
-        throw new Error(`Only ${uploadResults.length} out of ${filesWithMeta.length} files uploaded.`);
-      }
+      if (!uploadResults || uploadResults.length === 0) throw new Error("No files were uploaded.");
+      if (uploadResults.length !== filesWithMeta.length)
+        throw new Error(`Only ${uploadResults.length} of ${filesWithMeta.length} files uploaded.`);
 
-      // Build result map and track uploaded URLs for cleanup
       const resultMap: Record<string, string> = {};
-      uploadResults.forEach((res, index) => {
-        const key = filesWithMeta[index].key;
+      uploadResults.forEach((res, i) => {
+        const key = filesWithMeta[i].key;
         const url = res.ufsUrl || res.url;
         if (!url) throw new Error(`Missing URL for ${key}`);
         resultMap[key] = url;
-        uploadedUrlsToCleanup.push(url);
+        freshlyUploadedUrls.push(url);
       });
 
-      // Store URLs in case we need to clean up later
-      setUploadedUrls({
-        cv: resultMap.cv,
-        transcript: resultMap.transcript,
-        addition: resultMap.addition,
-      });
+      // Track for cleanup if subsequent steps fail
+      uploadedUrlsRef.current = { cv: resultMap.cv, transcript: resultMap.transcript, addition: resultMap.addition };
 
       const payload: TeacherPayload = {
         name: values.name,
@@ -563,29 +542,24 @@ export default function TeacherFormPage() {
         long: values.long,
       };
 
-      const res = await createTeacherFrom(payload);
-      if (!res.success) {
-        throw new Error(res?.error || "Failed to create teacher");
-      }
+      const result = await createTeacherFrom(payload);
+      if (!result.success) throw new Error(result?.error || "Failed to create teacher");
 
-      // Success: clear storage and form
+      // Success — clear everything
       sessionStorage.removeItem(STORAGE_KEY);
       sessionStorage.removeItem(PREVIEWS_KEY);
       form.reset();
-      setCvFile(null);
-      setCvPreview("");
-      setTranscriptFile(null);
-      setTranscriptPreview("");
-      setAdditionFile(null);
-      setAdditionPreview("");
-      setUploadedUrls({});
+      setCvFile(null); setCvPreview("");
+      setTranscriptFile(null); setTranscriptPreview("");
+      setAdditionFile(null); setAdditionPreview("");
+      uploadedUrlsRef.current = {};
       setShowMap(false);
       toast.success("Registration submitted successfully!");
     } catch (error) {
-      // On failure, delete any uploaded files from the server
-      if (uploadedUrlsToCleanup.length) {
-        await removeMultipleImages(uploadedUrlsToCleanup);
-        setUploadedUrls({});
+      // Clean up any files uploaded during this attempt
+      if (freshlyUploadedUrls.length) {
+        await removeMultipleImages(freshlyUploadedUrls);
+        uploadedUrlsRef.current = {};
       }
       toast.error(getErrorMessage(error) || "Submission failed");
     } finally {
@@ -593,88 +567,43 @@ export default function TeacherFormPage() {
     }
   };
 
-  // ─── Check if files are missing after restore (refresh case) ────────────
-  const isFileMissing = !cvFile || !transcriptFile;
-  const showFileWarning = isFileMissing && (cvPreview || transcriptPreview);
-
-  // ─── Input style helper ──────────────────────────────────────────────────
-  const inputCls =
-    "h-10 rounded-lg bg-background dark:bg-gray-900 border-border dark:border-gray-700 text-foreground dark:text-white text-sm placeholder:text-muted-foreground dark:placeholder:text-gray-500 focus-visible:ring-blue-400 focus-visible:border-blue-400 dark:focus-visible:ring-blue-500 dark:focus-visible:border-blue-500";
-
-  // ─── Autocomplete effect ─────────────────────────────────────────────────
-  const locationVal = form.watch("location");
-  useEffect(() => {
-    const q = String(locationVal ?? "").trim();
-    if (q.length < 3) {
-      setLocationOptions([]);
-      return;
-    }
-    if (locationDebounceRef.current) window.clearTimeout(locationDebounceRef.current);
-    locationDebounceRef.current = window.setTimeout(async () => {
-      try {
-        setLocationPicking(true);
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&addressdetails=0`
-        );
-        const list = (await res.json()) as Array<{
-          display_name?: string;
-          lat?: string;
-          lon?: string;
-        }>;
-        const options = list
-          .map((x) => ({
-            label: String(x.display_name ?? "").trim(),
-            lat: Number(x.lat),
-            lon: Number(x.lon),
-          }))
-          .filter((x) => x.label && Number.isFinite(x.lat) && Number.isFinite(x.lon))
-          .slice(0, 6);
-        setLocationOptions(options);
-      } catch {
-        setLocationOptions([]);
-      } finally {
-        setLocationPicking(false);
-      }
-    }, 350);
-    return () => {
-      if (locationDebounceRef.current) window.clearTimeout(locationDebounceRef.current);
-    };
-  }, [locationVal]);
-
   const hasCoords = form.watch("lat") !== undefined && form.watch("long") !== undefined;
+  const isFileMissing = !cvFile || !transcriptFile;
+  const showFileWarning = isFileMissing && (!!cvPreview || !!transcriptPreview);
 
   return (
-    <div className="min-h-screen bg-background dark:bg-[#0b1120] py-6 sm:py-10 px-4">
-      <div className="max-w-xl mx-auto space-y-5">
-        {/* Header */}
-        <div className="text-center pb-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-500 shadow-lg shadow-blue-200/60 dark:shadow-blue-900/30 mb-4">
-            <GraduationCap className="w-7 h-7 text-white" />
+    <div className="min-h-screen bg-background dark:bg-[#0a0f1a] py-8 sm:py-12 px-4">
+      <div className="max-w-lg mx-auto">
+
+        {/* ── Header ── */}
+        <div className="mb-8 sm:mb-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <GraduationCap className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
+              Tutor Registration
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground dark:text-white tracking-tight">
-            Tutor Registration
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground dark:text-white leading-tight tracking-tight">
+            Join as a tutor.
           </h1>
-          <p className="text-sm text-muted-foreground dark:text-gray-400 mt-1.5 max-w-sm mx-auto">
-            Join our platform and connect with students seeking your expertise.
+          <p className="text-sm text-muted-foreground dark:text-white/40 mt-2 leading-relaxed max-w-sm">
+            Fill in your details and we'll match you with students in your area.
           </p>
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {/* Personal Information */}
-          <SectionCard
-            step={1}
-            icon={<User className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
-            title="Personal Information"
-            accentClass="bg-blue-50 dark:bg-blue-900/30"
-          >
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          {/* ── Step 1: Personal ── */}
+          <StepSection step={1} title="Personal Information">
             <FieldGroup className="gap-4">
               <Controller
                 name="name"
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel>Full Name</FieldLabel>
-                    <Input {...field} id="name" placeholder="e.g. Aarav Sharma" disabled={saving} className={inputCls} />
+                    <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">Full Name</FieldLabel>
+                    <Input {...field} placeholder="e.g. Aarav Sharma" disabled={saving} className={inputCls} />
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
@@ -684,9 +613,9 @@ export default function TeacherFormPage() {
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel><Mail className="w-3 h-3 inline mr-1 opacity-50" /> Email Address</FieldLabel>
-                    <Input {...field} id="email" type="email" placeholder="you@example.com" disabled={saving} className={inputCls} />
-                    <FieldDescription>We&apos;ll send updates here.</FieldDescription>
+                    <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">Email</FieldLabel>
+                    <Input {...field} type="email" placeholder="you@example.com" disabled={saving} className={inputCls} />
+                    <FieldDescription className="text-[11px]">We'll send updates here.</FieldDescription>
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
@@ -696,9 +625,9 @@ export default function TeacherFormPage() {
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel><Phone className="w-3 h-3 inline mr-1 opacity-50" /> Phone Number</FieldLabel>
-                    <Input {...field} id="phone" placeholder="98XXXXXXXX" disabled={saving} className={inputCls} />
-                    <FieldDescription>We will contact you through this number.</FieldDescription>
+                    <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">Phone</FieldLabel>
+                    <Input {...field} placeholder="98XXXXXXXX" disabled={saving} className={inputCls} />
+                    <FieldDescription className="text-[11px]">We'll contact you through this number.</FieldDescription>
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
@@ -708,10 +637,10 @@ export default function TeacherFormPage() {
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel><VenusAndMars className="w-3 h-3 inline mr-1 opacity-50" /> Gender</FieldLabel>
+                    <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">Gender</FieldLabel>
                     <Select value={field.value} onValueChange={field.onChange} disabled={saving}>
                       <SelectTrigger className={cn(inputCls, "w-full", fieldState.invalid && "border-destructive")}>
-                        <SelectValue placeholder="Select your gender" />
+                        <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="male">Male</SelectItem>
@@ -719,21 +648,18 @@ export default function TeacherFormPage() {
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FieldDescription>This helps us personalize our communication.</FieldDescription>
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
               />
             </FieldGroup>
-          </SectionCard>
+          </StepSection>
 
-          {/* Location */}
-          <SectionCard
+          {/* ── Step 2: Location ── */}
+          <StepSection
             step={2}
-            icon={<MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
             title="Location"
-            description="Used to match you with nearby tuition opportunities."
-            accentClass="bg-blue-50 dark:bg-blue-900/30"
+            description="Helps us match you with nearby tuition opportunities."
           >
             <FieldGroup className="gap-4">
               <Controller
@@ -741,35 +667,43 @@ export default function TeacherFormPage() {
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel>Location</FieldLabel>
-                    <div className="flex gap-2">
+                    <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">Your Area</FieldLabel>
+                    <div className="flex gap-2" ref={locationDropdownRef}>
                       <div className="relative flex-1">
-                        <Input {...field} id="location" placeholder="e.g. Kathmandu, Baneshwor" disabled={saving} className={inputCls} />
+                        <Input
+                          {...field}
+                          placeholder="e.g. Kathmandu, Baneshwor"
+                          disabled={saving}
+                          className={inputCls}
+                        />
                         {String(field.value ?? "").trim().length >= 3 &&
                           (locationPicking || locationOptions.length > 0) && (
-                            <div className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
-                              {locationPicking && <div className="px-3 py-2 text-xs text-muted-foreground">Searching locations…</div>}
-                              {!locationPicking &&
-                                locationOptions.map((opt) => (
-                                  <button
-                                    key={`${opt.lat}-${opt.lon}-${opt.label}`}
-                                    type="button"
-                                    onClick={() => {
-                                      form.setValue("location", opt.label, { shouldValidate: true });
-                                      form.setValue("lat", opt.lat, { shouldValidate: true });
-                                      form.setValue("long", opt.lon, { shouldValidate: true });
-                                      setLocationOptions([]);
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors"
-                                  >
-                                    <div className="truncate">{opt.label}</div>
-                                    <div className="text-[10px] text-muted-foreground mt-0.5">
-                                      {opt.lat.toFixed(5)}, {opt.lon.toFixed(5)}
-                                    </div>
-                                  </button>
-                                ))}
+                            <div className="absolute z-20 mt-1 w-full rounded-xl border border-border bg-background dark:bg-[#0f1929] shadow-xl overflow-hidden">
+                              {locationPicking && (
+                                <div className="px-3 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
+                                  <Loader2 className="w-3 h-3 animate-spin" /> Searching…
+                                </div>
+                              )}
+                              {!locationPicking && locationOptions.map((opt) => (
+                                <button
+                                  key={`${opt.lat}-${opt.lon}`}
+                                  type="button"
+                                  onClick={() => {
+                                    form.setValue("location", opt.label, { shouldValidate: true });
+                                    form.setValue("lat", opt.lat, { shouldValidate: true });
+                                    form.setValue("long", opt.lon, { shouldValidate: true });
+                                    setLocationOptions([]);
+                                  }}
+                                  className="w-full text-left px-3 py-2.5 text-xs hover:bg-muted dark:hover:bg-white/5 transition-colors border-b border-border/50 last:border-0"
+                                >
+                                  <div className="truncate font-medium text-foreground dark:text-white">{opt.label}</div>
+                                  <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                                    {opt.lat.toFixed(4)}, {opt.lon.toFixed(4)}
+                                  </div>
+                                </button>
+                              ))}
                               {!locationPicking && locationOptions.length === 0 && (
-                                <div className="px-3 py-2 text-xs text-muted-foreground">No matches.</div>
+                                <div className="px-3 py-2.5 text-xs text-muted-foreground">No matches found.</div>
                               )}
                             </div>
                           )}
@@ -780,62 +714,79 @@ export default function TeacherFormPage() {
                         size="sm"
                         disabled={saving || locating}
                         onClick={handleUseMyLocation}
-                        className="h-10 px-3 rounded-lg text-xs gap-1.5 whitespace-nowrap border-border bg-card text-foreground hover:border-blue-500 hover:text-blue-600"
+                        className="h-10 px-3 rounded-lg text-xs gap-1.5 flex-shrink-0 border-border/60 dark:border-white/10"
+                        title="Use my location"
                       >
-                        {locating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
-                        <span className="hidden sm:inline">My location</span>
-                        <span className="sm:hidden">Locate</span>
+                        {locating
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Navigation className="w-3.5 h-3.5" />
+                        }
+                        <span className="hidden sm:inline text-xs">My location</span>
                       </Button>
                     </div>
-                    <FieldDescription>Enter your area so we can reach you when a tuition is nearby.</FieldDescription>
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
               />
+
               <Controller
                 name="location_hint"
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel>Location Hint</FieldLabel>
+                    <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">Location Hint</FieldLabel>
                     <Textarea
                       {...field}
-                      id="location_hint"
                       placeholder="e.g. Near Pragati Secondary School, blue gate house"
                       disabled={saving}
                       rows={2}
-                      className="rounded-lg bg-background border-border text-foreground text-sm placeholder:text-muted-foreground resize-none focus-visible:ring-blue-400"
+                      className="rounded-lg bg-background dark:bg-white/5 border-border/60 dark:border-white/10 text-foreground dark:text-white text-sm placeholder:text-muted-foreground/60 dark:placeholder:text-white/25 resize-none focus-visible:ring-1 focus-visible:ring-blue-500"
                     />
-                    <FieldDescription>Add a landmark or hint so we can find you easily.</FieldDescription>
+                    <FieldDescription className="text-[11px]">A nearby landmark so we can find you easily.</FieldDescription>
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
               />
+
               <Field>
-                <FieldLabel>Pin on Map <span className="text-[11px] font-normal text-muted-foreground">(optional)</span></FieldLabel>
+                <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">
+                  Pin on Map <span className="normal-case tracking-normal font-normal text-muted-foreground ml-1">optional</span>
+                </FieldLabel>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => setShowMap((v) => !v)} className="h-9 px-3 rounded-lg text-xs gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={saving}
+                    onClick={() => setShowMap((v) => !v)}
+                    className="h-9 px-3 rounded-lg text-xs gap-1.5 border-border/60 dark:border-white/10"
+                  >
                     <Map className="w-3.5 h-3.5" />
                     {showMap ? "Close map" : "Select from map"}
                   </Button>
                   {hasCoords && (
-                    <Button type="button" variant="outline" size="sm" disabled={saving} onClick={clearLocation} className="h-9 px-3 rounded-lg text-xs gap-1.5 border-destructive/50 text-destructive hover:bg-destructive/10">
-                      <X className="w-3.5 h-3.5" />
-                      Clear pin
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={saving}
+                      onClick={clearLocation}
+                      className="h-9 px-3 rounded-lg text-xs gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+                    >
+                      <X className="w-3.5 h-3.5" /> Clear pin
                     </Button>
                   )}
                 </div>
                 {hasCoords && (
-                  <p className="text-xs text-foreground mt-2 flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-lg px-3 py-2">
-                    <Check className="w-3.5 h-3.5 flex-shrink-0 text-blue-600" />
-                    <span>
+                  <p className="text-[11px] text-foreground mt-2 flex items-start gap-1.5 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-lg px-3 py-2">
+                    <Check className="w-3.5 h-3.5 flex-shrink-0 text-blue-600 mt-0.5" />
+                    <span className="font-mono">
                       {form.watch("lat")?.toFixed(5)}, {form.watch("long")?.toFixed(5)}
-                      {locationVal && ` — ${locationVal.slice(0, 60)}${locationVal.length > 60 ? "…" : ""}`}
                     </span>
                   </p>
                 )}
                 {showMap && (
-                  <div className="mt-3 rounded-xl overflow-hidden border border-border shadow-sm">
+                  <div className="mt-3 rounded-xl overflow-hidden border border-border/60 dark:border-white/10">
                     <MapPicker
                       initialLat={form.watch("lat")}
                       initialLon={form.watch("long")}
@@ -845,6 +796,7 @@ export default function TeacherFormPage() {
                   </div>
                 )}
               </Field>
+
               {(showMap || hasCoords) && (
                 <div className="grid grid-cols-2 gap-3">
                   <Controller
@@ -852,9 +804,8 @@ export default function TeacherFormPage() {
                     control={form.control}
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel>Latitude</FieldLabel>
+                        <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">Latitude</FieldLabel>
                         <Input
-                          id="lat"
                           type="number"
                           step="any"
                           placeholder="27.7172"
@@ -872,9 +823,8 @@ export default function TeacherFormPage() {
                     control={form.control}
                     render={({ field, fieldState }) => (
                       <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel>Longitude</FieldLabel>
+                        <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">Longitude</FieldLabel>
                         <Input
-                          id="long"
                           type="number"
                           step="any"
                           placeholder="85.3240"
@@ -890,21 +840,19 @@ export default function TeacherFormPage() {
                 </div>
               )}
             </FieldGroup>
-          </SectionCard>
+          </StepSection>
 
-          {/* Documents */}
-          <SectionCard
+          {/* ── Step 3: Documents ── */}
+          <StepSection
             step={3}
-            icon={<Upload className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
             title="Documents"
-            description="CV and transcript are required. Additional certificate is optional."
-            accentClass="bg-blue-50 dark:bg-blue-900/30"
+            description="CV and transcript required. Certificate is optional."
           >
             <FieldGroup className="gap-5">
               {showFileWarning && (
-                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg text-xs border border-amber-200 dark:border-amber-800">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>You refreshed the page – please re-upload your CV and transcript.</span>
+                <div className="flex items-start gap-2.5 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 p-3 rounded-xl text-xs border border-amber-200/60 dark:border-amber-800/40">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>Page was refreshed — please re-upload your CV and transcript.</span>
                 </div>
               )}
               <FileDropZone
@@ -931,7 +879,7 @@ export default function TeacherFormPage() {
               />
               <FileDropZone
                 label="Additional Document"
-                hint="Any supporting certificate · JPG, PNG, WEBP · Max 5 MB"
+                hint="Supporting certificate · JPG, PNG, WEBP · Max 5 MB"
                 file={additionFile}
                 preview={additionPreview}
                 disabled={saving}
@@ -942,59 +890,65 @@ export default function TeacherFormPage() {
                 onRemove={() => handleFileRemove("addition_file", setAdditionFile, setAdditionPreview, "addition")}
               />
             </FieldGroup>
-          </SectionCard>
+          </StepSection>
 
-          {/* Footer Buttons */}
-          <div className="flex justify-between gap-3 pt-1 pb-8">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={saving}
-              onClick={handleClearAll}
-              className="h-10 rounded-lg text-sm px-5 border-destructive/50 text-destructive hover:bg-destructive/10"
-            >
-              Clear all data
-            </Button>
-            <div className="flex gap-3">
+          {/* ── Footer Buttons ──
+              Mobile: stack vertically, full width
+              Desktop: side by side row
+          ── */}
+          <div className="pt-2 pb-10 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
+
+            {/* Destructive actions — grouped left on desktop, full-width on mobile */}
+            <div className="flex gap-2 sm:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving}
+                onClick={handleClearAll}
+                className="flex-1 sm:flex-none h-11 sm:h-10 rounded-xl text-sm px-4 border-destructive/30 text-destructive hover:bg-destructive/10 gap-2"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear all</span>
+              </Button>
               <Button
                 type="button"
                 variant="outline"
                 disabled={saving}
                 onClick={() => {
                   form.reset();
-                  setCvFile(null);
-                  setCvPreview("");
-                  setTranscriptFile(null);
-                  setTranscriptPreview("");
-                  setAdditionFile(null);
-                  setAdditionPreview("");
+                  setCvFile(null); setCvPreview("");
+                  setTranscriptFile(null); setTranscriptPreview("");
+                  setAdditionFile(null); setAdditionPreview("");
                   setShowMap(false);
                   sessionStorage.removeItem(STORAGE_KEY);
                   sessionStorage.removeItem(PREVIEWS_KEY);
                   toast.info("Form reset");
                 }}
-                className="h-10 rounded-lg text-sm px-5"
+                className="flex-1 sm:flex-none h-11 sm:h-10 rounded-xl text-sm px-4 border-border/60 dark:border-white/10 gap-2"
               >
-                Reset
-              </Button>
-              <Button
-                type="submit"
-                disabled={saving || isFileMissing}
-                className="h-10 rounded-lg text-sm font-semibold px-7 bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-60"
-              >
-                {saving ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Submitting…
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Check className="w-4 h-4" />
-                    Submit Registration
-                  </span>
-                )}
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
               </Button>
             </div>
+
+            {/* Primary submit — full width on mobile */}
+            <Button
+              type="submit"
+              disabled={saving || isFileMissing}
+              className="w-full sm:w-auto h-12 sm:h-10 rounded-xl text-sm font-semibold px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-50 gap-2 transition-all"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Submitting…
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Submit Registration
+                </>
+              )}
+            </Button>
           </div>
         </form>
       </div>

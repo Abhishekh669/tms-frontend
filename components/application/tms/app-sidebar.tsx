@@ -81,16 +81,16 @@ export function AppSidebar({ collapsed, onToggle, user }: AppSidebarProps) {
         <div className={cn("border-b border-black/5 dark:border-white/10 px-5 py-5")}>
           <div className="flex items-center gap-3">
             <div className="relative w-9 h-9 rounded-xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center shadow-sm">
-              <Image src="/logo.png" alt="Logo" fill className="object-contain p-1" />
+              <Image src="/tms/tms-logo.png" alt="Logo" fill className="object-contain p-1" />
             </div>
 
             {!collapsed && (
               <div>
                 <h1 className="text-sm font-semibold tracking-tight">
-                  Your App
+                  GharMai Shikshya
                 </h1>
                 <p className="text-[11px] text-muted-foreground">
-                  Teacher Recruitment
+                  Teacher Management System
                 </p>
               </div>
             )}
