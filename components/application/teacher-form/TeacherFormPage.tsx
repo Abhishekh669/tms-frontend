@@ -51,6 +51,10 @@ import { useRouter } from "next/navigation";
 
 const MapPicker = dynamic(() => import("./MapPicker"), { ssr: false });
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 MB hard limit
+const MAX_FILE_LABEL = "2 MB";
+
 // ─── Schema ──────────────────────────────────────────────────────────────────
 const teacherSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -68,15 +72,15 @@ const teacherSchema = z.object({
   long: z.number({ invalid_type_error: "Longitude is required" }).optional(),
   cv_file: z
     .instanceof(File, { message: "CV image is required" })
-    .refine((f) => f.size <= 5 * 1024 * 1024, "CV image must be under 5MB"),
+    .refine((f) => f.size <= MAX_FILE_BYTES, `CV image must be under ${MAX_FILE_LABEL}`),
   transcript_file: z
     .instanceof(File, { message: "Class 12 transcript is required" })
-    .refine((f) => f.size <= 5 * 1024 * 1024, "Transcript must be under 5MB"),
+    .refine((f) => f.size <= MAX_FILE_BYTES, `Transcript must be under ${MAX_FILE_LABEL}`),
   addition_file: z
     .union([
       z
         .instanceof(File)
-        .refine((f) => f.size <= 5 * 1024 * 1024, "Additional document must be under 5MB"),
+        .refine((f) => f.size <= MAX_FILE_BYTES, `Additional document must be under ${MAX_FILE_LABEL}`),
       z.undefined(),
     ])
     .optional(),
@@ -99,10 +103,21 @@ export interface TeacherPayload {
 }
 
 // ─── Storage keys ─────────────────────────────────────────────────────────────
-// NOTE: We never store File objects in sessionStorage (they can't be serialized).
-// We only store text fields + base64 previews separately.
 const STORAGE_KEY = "teacher-form-draft";
 const PREVIEWS_KEY = "teacher-form-previews";
+
+// ─── Safe file validator (run BEFORE FileReader / object URL) ─────────────────
+// Returns an error string if invalid, or null if OK.
+function validateFile(file: File): string | null {
+  if (!file.type.startsWith("image/")) {
+    return "Only image files (JPG, PNG, WEBP) are accepted.";
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    return `File is ${sizeMB} MB — please use an image under ${MAX_FILE_LABEL}.`;
+  }
+  return null;
+}
 
 // ─── File Drop Zone ───────────────────────────────────────────────────────────
 interface FileDropZoneProps {
@@ -135,9 +150,12 @@ function FileDropZone({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const dropped = e.dataTransfer.files[0];
-    if (dropped?.type.startsWith("image/")) onSelect(dropped);
+    if (dropped) onSelect(dropped);
   };
 
+  // FIX: Use a visible <label> wrapping the hidden input so mobile browsers
+  // reliably open the file picker without needing JS click() calls,
+  // which are frequently swallowed by mobile WebKit.
   return (
     <Field data-invalid={invalid}>
       <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50 mb-1.5">
@@ -148,12 +166,13 @@ function FileDropZone({
           </span>
         )}
       </FieldLabel>
-      <div
+
+      {/* Use an HTML <label> so tapping anywhere triggers the input — no JS needed */}
+      <label
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        onClick={() => !disabled && inputRef.current?.click()}
         className={cn(
-          "relative rounded-xl border cursor-pointer overflow-hidden transition-all duration-200 group",
+          "relative rounded-xl border cursor-pointer overflow-hidden transition-all duration-200 group block",
           preview ? "h-36" : "h-24",
           disabled && "opacity-50 pointer-events-none",
           invalid
@@ -169,12 +188,14 @@ function FileDropZone({
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
               <span className="text-white text-xs font-medium">Replace</span>
             </div>
+            {/* FIX: Stop propagation so the X button doesn't also trigger file picker */}
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onRemove(); }}
-              className="absolute top-2 right-2 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-destructive transition-colors z-10"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
+              className="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-destructive transition-colors z-10 touch-manipulation"
+              style={{ WebkitTapHighlightColor: "transparent" }}
             >
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </>
         ) : (
@@ -193,15 +214,23 @@ function FileDropZone({
             </div>
           </div>
         )}
+
+        {/* Hidden input is INSIDE the label — mobile browsers wire the tap automatically */}
         <input
           ref={inputRef}
           type="file"
           accept="image/*"
           className="hidden"
           disabled={disabled}
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) onSelect(f); }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            // Reset input value so the same file can be re-selected after removal
+            e.target.value = "";
+            if (f) onSelect(f);
+          }}
         />
-      </div>
+      </label>
+
       {invalid && errors && errors.length > 0 && <FieldError errors={errors} />}
     </Field>
   );
@@ -221,17 +250,13 @@ function StepSection({
 }) {
   return (
     <div className="relative">
-      {/* Step indicator — sits outside to the left on sm+ */}
       <div className="flex gap-4 sm:gap-5">
-        {/* Number badge */}
         <div className="flex-shrink-0 flex flex-col items-center gap-1 pt-0.5">
           <div className="w-7 h-7 rounded-full bg-foreground dark:bg-white text-background dark:text-black text-[11px] font-black flex items-center justify-center tabular-nums select-none">
             {step}
           </div>
           <div className="w-px flex-1 bg-border/50 dark:bg-white/10 mt-1" />
         </div>
-
-        {/* Card content */}
         <div className="flex-1 pb-6 min-w-0">
           <div className="mb-4">
             <h2 className="text-sm font-bold text-foreground dark:text-white tracking-tight">{title}</h2>
@@ -265,7 +290,6 @@ export default function TeacherFormPage() {
   const locationDropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // File state — File objects are never stored in sessionStorage
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [cvPreview, setCvPreview] = useState("");
   const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
@@ -273,7 +297,6 @@ export default function TeacherFormPage() {
   const [additionFile, setAdditionFile] = useState<File | null>(null);
   const [additionPreview, setAdditionPreview] = useState("");
 
-  // Track uploaded URLs for cleanup on error / replacement
   const uploadedUrlsRef = useRef<{ cv?: string; transcript?: string; addition?: string }>({});
 
   const form = useForm<TeacherFormValues>({
@@ -296,7 +319,6 @@ export default function TeacherFormPage() {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        // Only restore serializable (non-File) fields
         const { name, email, phone, gender, location, location_hint, lat, long } = parsed;
         form.reset({ name, email, phone, gender, location, location_hint, lat, long });
       } catch (_) {}
@@ -312,7 +334,7 @@ export default function TeacherFormPage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── Persist text fields on change (never persist File objects) ──────────
+  // ─── Persist text fields on change ──────────────────────────────────────
   useEffect(() => {
     const subscription = form.watch((values) => {
       const { name, email, phone, gender, location, location_hint, lat, long } = values;
@@ -324,7 +346,7 @@ export default function TeacherFormPage() {
     return () => subscription.unsubscribe();
   }, [form]);
 
-  // ─── Persist previews (base64 strings are serializable) ─────────────────
+  // ─── Persist previews ────────────────────────────────────────────────────
   useEffect(() => {
     sessionStorage.setItem(
       PREVIEWS_KEY,
@@ -355,7 +377,7 @@ export default function TeacherFormPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ─── Cleanup uploaded images from server ─────────────────────────────────
+  // ─── Cleanup uploaded images ─────────────────────────────────────────────
   const cleanupUploadedImages = async (urls?: string[]) => {
     const toDelete =
       urls ?? (Object.values(uploadedUrlsRef.current).filter(Boolean) as string[]);
@@ -385,6 +407,8 @@ export default function TeacherFormPage() {
       r.readAsDataURL(file);
     });
 
+  // FIX: Validate FIRST before doing anything with the file.
+  // This prevents large images from crashing the page (no FileReader / object URL created).
   const handleFileSelect = async (
     file: File,
     field: "cv_file" | "transcript_file" | "addition_file",
@@ -392,7 +416,14 @@ export default function TeacherFormPage() {
     setPreview: (p: string) => void,
     urlKey: "cv" | "transcript" | "addition"
   ) => {
-    // Delete previously uploaded URL for this slot (orphan prevention)
+    // ── Validate before touching anything ────────────────────────────────
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast.error(validationError, { duration: 4000 });
+      return; // Stop here — no FileReader, no preview, no crash
+    }
+
+    // Safe from here: delete old slot, create preview
     const prev = uploadedUrlsRef.current[urlKey];
     if (prev) {
       await removeMultipleImages([prev]);
@@ -420,9 +451,10 @@ export default function TeacherFormPage() {
   };
 
   // ─── Location helpers ────────────────────────────────────────────────────
+  // FIX: Show a descriptive toast guiding mobile users to enable location.
   const handleUseMyLocation = () => {
     if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported");
+      toast.error("Geolocation is not supported by your browser.");
       return;
     }
     setLocating(true);
@@ -440,14 +472,34 @@ export default function TeacherFormPage() {
             data.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
             { shouldValidate: true }
           );
-          toast.success("Location detected");
+          toast.success("Location detected successfully!");
         } catch {
           form.setValue("location", `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`, { shouldValidate: true });
         } finally {
           setLocating(false);
         }
       },
-      (err) => { setLocating(false); toast.error("Could not get location: " + err.message); }
+      (err) => {
+        setLocating(false);
+        // FIX: Specific, actionable messages per error code
+        if (err.code === 1) {
+          // PERMISSION_DENIED
+          toast.error(
+            "Location access was denied. On your phone, go to Settings → Browser → Location → Allow, then try again.",
+            { duration: 7000 }
+          );
+        } else if (err.code === 2) {
+          // POSITION_UNAVAILABLE
+          toast.error("Could not determine your location. Make sure your GPS / mobile data is on.", { duration: 5000 });
+        } else {
+          toast.error("Location request timed out. Please try again or type your area manually.", { duration: 5000 });
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
     );
   };
 
@@ -527,7 +579,6 @@ export default function TeacherFormPage() {
         freshlyUploadedUrls.push(url);
       });
 
-      // Track for cleanup if subsequent steps fail
       uploadedUrlsRef.current = { cv: resultMap.cv, transcript: resultMap.transcript, addition: resultMap.addition };
 
       const payload: TeacherPayload = {
@@ -547,7 +598,6 @@ export default function TeacherFormPage() {
       const result = await createTeacherFrom(payload);
       if (!result.success) throw new Error(result?.error || "Failed to create teacher");
 
-      // Success — clear everything
       sessionStorage.removeItem(STORAGE_KEY);
       sessionStorage.removeItem(PREVIEWS_KEY);
       form.reset();
@@ -557,9 +607,8 @@ export default function TeacherFormPage() {
       uploadedUrlsRef.current = {};
       setShowMap(false);
       toast.success("Registration submitted successfully!");
-      router.replace("/")
+      router.replace("/");
     } catch (error) {
-      // Clean up any files uploaded during this attempt
       if (freshlyUploadedUrls.length) {
         await removeMultipleImages(freshlyUploadedUrls);
         uploadedUrlsRef.current = {};
@@ -596,7 +645,9 @@ export default function TeacherFormPage() {
           </p>
         </div>
 
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        {/* FIX: suppress the native HTML form submission so all interaction goes through RHF */}
+        <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+
           {/* ── Step 1: Personal ── */}
           <StepSection step={1} title="Personal Information">
             <FieldGroup className="gap-4">
@@ -635,22 +686,34 @@ export default function TeacherFormPage() {
                   </Field>
                 )}
               />
+
+              {/* FIX: Gender Select — wrap SelectTrigger in a div with higher z-index
+                  so the mobile tap target is never obscured by adjacent elements. */}
               <Controller
                 name="gender"
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50">Gender</FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange} disabled={saving}>
-                      <SelectTrigger className={cn(inputCls, "w-full", fieldState.invalid && "border-destructive")}>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="relative z-10">
+                      <Select value={field.value} onValueChange={field.onChange} disabled={saving}>
+                        <SelectTrigger
+                          className={cn(inputCls, "w-full touch-manipulation")}
+                          style={{ WebkitTapHighlightColor: "transparent" }}
+                        >
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent
+                          // FIX: Render in a portal so it's never clipped by overflow:hidden parents
+                          position="popper"
+                          className="z-50"
+                        >
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
@@ -697,7 +760,7 @@ export default function TeacherFormPage() {
                                     form.setValue("long", opt.lon, { shouldValidate: true });
                                     setLocationOptions([]);
                                   }}
-                                  className="w-full text-left px-3 py-2.5 text-xs hover:bg-muted dark:hover:bg-white/5 transition-colors border-b border-border/50 last:border-0"
+                                  className="w-full text-left px-3 py-2.5 text-xs hover:bg-muted dark:hover:bg-white/5 transition-colors border-b border-border/50 last:border-0 touch-manipulation"
                                 >
                                   <div className="truncate font-medium text-foreground dark:text-white">{opt.label}</div>
                                   <div className="text-[10px] text-muted-foreground mt-0.5 font-mono">
@@ -711,13 +774,16 @@ export default function TeacherFormPage() {
                             </div>
                           )}
                       </div>
+
+                      {/* FIX: "My Location" button — larger touch target + hint banner below */}
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         disabled={saving || locating}
                         onClick={handleUseMyLocation}
-                        className="h-10 px-3 rounded-lg text-xs gap-1.5 flex-shrink-0 border-border/60 dark:border-white/10"
+                        className="h-10 px-3 rounded-lg text-xs gap-1.5 flex-shrink-0 border-border/60 dark:border-white/10 touch-manipulation"
+                        style={{ WebkitTapHighlightColor: "transparent", minWidth: "44px" }}
                         title="Use my location"
                       >
                         {locating
@@ -727,6 +793,17 @@ export default function TeacherFormPage() {
                         <span className="hidden sm:inline text-xs">My location</span>
                       </Button>
                     </div>
+
+                    {/* FIX: Mobile location tip — always visible so users know to enable GPS */}
+                    <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground flex items-start gap-1.5">
+                      <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5 text-blue-500" />
+                      <span>
+                        For the most accurate pin, make sure your phone&apos;s{" "}
+                        <strong>Location / GPS is turned on</strong> in Settings before tapping{" "}
+                        <Navigation className="w-2.5 h-2.5 inline -mt-0.5" />.
+                      </span>
+                    </p>
+
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
@@ -756,13 +833,15 @@ export default function TeacherFormPage() {
                   Pin on Map <span className="normal-case tracking-normal font-normal text-muted-foreground ml-1">optional</span>
                 </FieldLabel>
                 <div className="flex flex-wrap gap-2">
+                  {/* FIX: Map button — use min touch target size (44px) and touch-manipulation */}
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     disabled={saving}
                     onClick={() => setShowMap((v) => !v)}
-                    className="h-9 px-3 rounded-lg text-xs gap-1.5 border-border/60 dark:border-white/10"
+                    className="h-11 sm:h-9 px-4 rounded-lg text-xs gap-1.5 border-border/60 dark:border-white/10 touch-manipulation"
+                    style={{ WebkitTapHighlightColor: "transparent", minWidth: "44px" }}
                   >
                     <Map className="w-3.5 h-3.5" />
                     {showMap ? "Close map" : "Select from map"}
@@ -774,7 +853,8 @@ export default function TeacherFormPage() {
                       size="sm"
                       disabled={saving}
                       onClick={clearLocation}
-                      className="h-9 px-3 rounded-lg text-xs gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+                      className="h-11 sm:h-9 px-4 rounded-lg text-xs gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 touch-manipulation"
+                      style={{ WebkitTapHighlightColor: "transparent" }}
                     >
                       <X className="w-3.5 h-3.5" /> Clear pin
                     </Button>
@@ -849,7 +929,7 @@ export default function TeacherFormPage() {
           <StepSection
             step={3}
             title="Documents"
-            description="CV and transcript required. Certificate is optional."
+            description={`CV and transcript required. Certificate is optional. Max ${MAX_FILE_LABEL} per file.`}
           >
             <FieldGroup className="gap-5">
               {showFileWarning && (
@@ -860,7 +940,7 @@ export default function TeacherFormPage() {
               )}
               <FileDropZone
                 label="CV / Resume"
-                hint="JPG, PNG, WEBP · Max 5 MB"
+                hint={`JPG, PNG, WEBP · Max ${MAX_FILE_LABEL}`}
                 file={cvFile}
                 preview={cvPreview}
                 disabled={saving}
@@ -871,7 +951,7 @@ export default function TeacherFormPage() {
               />
               <FileDropZone
                 label="Class 12 Transcript"
-                hint="JPG, PNG, WEBP · Max 5 MB"
+                hint={`JPG, PNG, WEBP · Max ${MAX_FILE_LABEL}`}
                 file={transcriptFile}
                 preview={transcriptPreview}
                 disabled={saving}
@@ -882,7 +962,7 @@ export default function TeacherFormPage() {
               />
               <FileDropZone
                 label="Additional Document"
-                hint="Supporting certificate · JPG, PNG, WEBP · Max 5 MB"
+                hint={`Supporting certificate · JPG, PNG, WEBP · Max ${MAX_FILE_LABEL}`}
                 file={additionFile}
                 preview={additionPreview}
                 disabled={saving}
@@ -895,20 +975,16 @@ export default function TeacherFormPage() {
             </FieldGroup>
           </StepSection>
 
-          {/* ── Footer Buttons ──
-              Mobile: stack vertically, full width
-              Desktop: side by side row
-          ── */}
+          {/* ── Footer Buttons ── */}
           <div className="pt-2 pb-10 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
-
-            {/* Destructive actions — grouped left on desktop, full-width on mobile */}
             <div className="flex gap-2 sm:gap-2">
               <Button
                 type="button"
                 variant="outline"
                 disabled={saving}
                 onClick={handleClearAll}
-                className="flex-1 sm:flex-none h-11 sm:h-10 rounded-xl text-sm px-4 border-destructive/30 text-destructive hover:bg-destructive/10 gap-2"
+                className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl text-sm px-4 border-destructive/30 text-destructive hover:bg-destructive/10 gap-2 touch-manipulation"
+                style={{ WebkitTapHighlightColor: "transparent" }}
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Clear all</span>
@@ -927,18 +1003,19 @@ export default function TeacherFormPage() {
                   sessionStorage.removeItem(PREVIEWS_KEY);
                   toast.info("Form reset");
                 }}
-                className="flex-1 sm:flex-none h-11 sm:h-10 rounded-xl text-sm px-4 border-border/60 dark:border-white/10 gap-2"
+                className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl text-sm px-4 border-border/60 dark:border-white/10 gap-2 touch-manipulation"
+                style={{ WebkitTapHighlightColor: "transparent" }}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset</span>
               </Button>
             </div>
 
-            {/* Primary submit — full width on mobile */}
             <Button
               type="submit"
               disabled={saving || isFileMissing}
-              className="w-full sm:w-auto h-12 sm:h-10 rounded-xl text-sm font-semibold px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-50 gap-2 transition-all"
+              className="w-full sm:w-auto h-12 sm:h-10 rounded-xl text-sm font-semibold px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-50 gap-2 transition-all touch-manipulation"
+              style={{ WebkitTapHighlightColor: "transparent" }}
             >
               {saving ? (
                 <>
