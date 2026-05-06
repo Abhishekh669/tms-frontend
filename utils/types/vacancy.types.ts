@@ -1,4 +1,4 @@
-import { GenderType } from "./teacher.types";
+import { GenderType, Teacher } from "./teacher.types";
 
 // status types (union instead of enum)
 export type VacancyStatus =
@@ -129,6 +129,7 @@ export type VacancyTypeById = {
 
   vacancy_id: string;
   assigned_to?: string | null;
+  assigned_teacher ?: Teacher | null;
 
   payment_status: PaymentStatus;
   amount_to_be_paid: number;
@@ -204,3 +205,27 @@ export type VacancyListResponse = {
   next_offset: number;
   vacancy_data: VacancyStats;
 };
+
+
+export interface AssignVacancy {
+  vacancy_id : string;
+  teacher_id : string;
+}
+
+
+export interface UnassignVacancy{
+  vacancy_id : string
+}
+
+
+export interface AddPaymentInVacancy{
+    payment_id : string;
+    payment_done : number;
+}
+
+export interface UpdatePaymentInVacancy{
+  payment_id : string;
+  payment_done : number;
+  amount_to_be_paid : number;
+  remaining_amount : number;
+}

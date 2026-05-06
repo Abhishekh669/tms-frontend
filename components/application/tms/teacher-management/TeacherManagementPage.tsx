@@ -21,6 +21,13 @@ import {
   AlertCircle,
   X,
 } from "lucide-react";
+// Add to imports at the top
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +65,7 @@ import { useGetAllTeachers } from "@/utils/hooks/tanstack/teacher/use-get-teache
 import { Teacher, TeacherQuery, TeacherStatus } from "@/utils/types/teacher.types";
 import { User } from "@/utils/types/user.types";
 import { ActionsDropdown } from "./DeelteTeacher";
+import AddTeacherManaully from "./AddTeacherManaully";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const DEFAULT_LIMIT = 20;
@@ -423,6 +431,7 @@ export default function TeacherManagementPage({ user }: { user: User }) {
     search: "",
     phone: "",
   });
+    const [addTeacherOpen, setAddTeacherOpen] = useState(false); // ← add this
   const [searchInput, setSearchInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<TeacherStatus | "all">("all");
@@ -514,6 +523,17 @@ export default function TeacherManagementPage({ user }: { user: User }) {
     <TooltipProvider>
       <div className="min-h-screen space-y-8 px-1">
 
+              <Dialog open={addTeacherOpen} onOpenChange={setAddTeacherOpen}>
+                <DialogContent className="!max-w-4xl w-full p-0 overflow-y-auto max-h-[90vh]">
+
+            <DialogTitle></DialogTitle>
+            <AddTeacherManaully onSuccess={() => {
+              setAddTeacherOpen(false);
+              refetch();
+            }} />
+          </DialogContent>
+        </Dialog>
+
         {/* ── Page Header ── */}
         <div className="relative overflow-hidden rounded-3xl border border-border bg-card px-8 py-8 shadow-sm">
           <div className="pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-[radial-gradient(circle,var(--color-accent)/12%,transparent_70%)]" />
@@ -534,11 +554,14 @@ export default function TeacherManagementPage({ user }: { user: User }) {
                 Manage teachers, view documents and track availability across your institution.
               </p>
             </div>
-
-            <Button className="h-9 rounded-xl gap-2 text-sm font-semibold px-4">
+             <Button
+              className="h-9 rounded-xl gap-2 text-sm font-semibold px-4"
+              onClick={() => setAddTeacherOpen(true)}
+            >
               <Plus className="w-4 h-4" />
               Add Teacher
             </Button>
+      
           </div>
         </div>
 
