@@ -134,7 +134,7 @@ function Navbar() {
       <Button
         asChild
         size="sm"
-        className="rounded-full bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 gap-1.5 text-xs sm:text-sm px-3 sm:px-4"
+        className="rounded-full bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-200 gap-1.5 text-xs sm:text-sm px-3 sm:px-8 h-10"
         style={baloo}
       >
         <Link href="/teacher-form">
@@ -315,7 +315,7 @@ function Hero() {
             <Button
               asChild
               size="lg"
-              className="rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 gap-2 font-bold w-full sm:w-auto justify-center"
+              className="rounded-full bg-blue-600 text-xl hover:bg-blue-700 shadow-lg shadow-blue-200 gap-2 font-bold w-full sm:w-auto justify-center h-14"
               style={baloo}
             >
               <Link href="/teacher-form">
@@ -336,7 +336,7 @@ function Hero() {
               asChild
               size="lg"
               variant="outline"
-              className="rounded-full border-2 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-400 font-bold w-full sm:w-auto justify-center"
+              className="rounded-full border-2 text-xl h-14 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-400 font-bold w-full sm:w-auto justify-center"
               style={baloo}
             >
               <a href="#contact">📞 Call us first</a>
