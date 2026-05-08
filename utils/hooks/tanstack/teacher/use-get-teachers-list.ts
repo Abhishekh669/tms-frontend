@@ -12,5 +12,11 @@ export const useGetAllTeachers = (query: TeacherQuery) => {
     queryKey: ["get-all-teachers", q.limit, q.page, q.phone, q.search],
     queryFn: () => fetchTeachers(q),
     placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,   // ❌ stop refetch on tab switch
+    refetchOnReconnect: false,    // ❌ stop refetch on internet reconnect
+    refetchOnMount: false,        // ❌ don't refetch when component remounts
+
+    staleTime: 1000 * 60 * 5,     // ✅ data stays fresh for 5 minutes
+    gcTime: 1000 * 60 * 10,
   });
 }
