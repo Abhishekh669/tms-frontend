@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import {
   MapPin,
@@ -60,12 +60,20 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { UpdateVacancy, VacancyTypeById } from "@/utils/types/vacancy.types";
 import { useGetVacancyById } from "@/utils/hooks/tanstack/vacancy/use-get-vacancy-list";
 import { useParams, useRouter } from "next/navigation";
 import { User as UserType } from "@/utils/types/user.types";
 import { useGetNearbyTeachers } from "@/utils/hooks/tanstack/vacancy/use-get-near-by-teacher";
+import { useGetTeachersManully } from "@/utils/hooks/tanstack/vacancy/use-get-teachers-manully";
 import {
   updateVacancyData,
   assignVacancyToTeacher,
@@ -73,7 +81,7 @@ import {
   addPaymentDetails,
   updateVacancyPaymentDetails,
 } from "@/utils/action/vacancy/vacancy.put";
-import type { Teacher as ApiTeacher } from "@/utils/types/teacher.types";
+import type { Teacher as ApiTeacher, GenderType } from "@/utils/types/teacher.types";
 import { useQueryClient } from "@tanstack/react-query";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -98,6 +106,24 @@ L.Icon.Default.mergeOptions({
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Teacher = ApiTeacher;
 type SearchMode = "vacancy" | "custom";
+type PrimaryTeacherTab = "nearby" | "manual";
+
+const DEFAULT_TEACHER_LIST_LIMIT = 20;
+
+
+function GetGenderText(gender: GenderType): string {
+  switch (gender) {
+    case "male":
+      return "Male";
+    case "female":
+      return "Female";
+    case "other":
+      return "Any";
+    default:
+      return "Any";
+}
+}
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -450,8 +476,10 @@ function NearbyTeachersMap(props: {
   tuitionLon: number;
   tuitionLabel: string;
   teachers: Teacher[];
+  totalWithinRadius?: number;
+  pageSize?: number;
 }) {
-  const { tuitionLat, tuitionLon, tuitionLabel, teachers } = props;
+  const { tuitionLat, tuitionLon, tuitionLabel, teachers, totalWithinRadius, pageSize } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tuitionMarkerRef = useRef<L.Marker | null>(null);
@@ -499,7 +527,7 @@ function NearbyTeachersMap(props: {
 
     if (!circleRef.current) {
       circleRef.current = L.circle([tuitionLat, tuitionLon], {
-        radius: 5000,
+        radius: 3000,
         color: "#2563eb",
         weight: 2,
         opacity: 0.55,
@@ -509,6 +537,7 @@ function NearbyTeachersMap(props: {
       }).addTo(map);
     } else {
       circleRef.current.setLatLng([tuitionLat, tuitionLon]);
+      circleRef.current.setRadius(3000);
     }
 
     const validTeachers = (teachers ?? []).filter(
@@ -556,7 +585,7 @@ function NearbyTeachersMap(props: {
     } else {
       map.setView([tuitionLat, tuitionLon], 13);
     }
-  }, [tuitionLat, tuitionLon, tuitionLabel, teachers]);
+  }, [tuitionLat, tuitionLon, tuitionLabel, teachers, totalWithinRadius, pageSize]);
 
   useEffect(() => {
     return () => {
@@ -611,17 +640,279 @@ function NearbyTeachersMap(props: {
               strokeDasharray="4 3"
             />
           </svg>
-          5 km radius
+          3 km radius
         </span>
-        <span className="ml-auto">
-          {(teachers ?? []).length} teacher
-          {(teachers ?? []).length !== 1 ? "s" : ""} found
+        <span className="ml-auto text-right max-w-[55%]">
+          {totalWithinRadius != null && totalWithinRadius >= 0 ? (
+            <>
+              <span className="block sm:inline">
+                {totalWithinRadius} vacant within 3 km
+              </span>
+              {pageSize != null && pageSize > 0 ? (
+                <span className="block sm:inline sm:ml-1 text-muted-foreground">
+                  · {teachers.length} on this page
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {(teachers ?? []).length} teacher
+              {(teachers ?? []).length !== 1 ? "s" : ""} on map
+            </>
+          )}
         </span>
       </div>
       <div
         ref={containerRef}
         className="bg-gray-50 dark:bg-slate-900 w-full h-[320px] md:h-[420px]"
       />
+    </div>
+  );
+}
+
+function VacancyTeacherPagination({
+  currentPage,
+  total,
+  limit,
+  onPageChange,
+}: {
+  currentPage: number;
+  total: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const visiblePages = useMemo(() => {
+    const pages: number[] = [];
+    const start = Math.max(0, currentPage - 2);
+    const end = Math.min(totalPages - 1, currentPage + 2);
+    for (let p = start; p <= end; p++) pages.push(p);
+    return pages;
+  }, [currentPage, totalPages]);
+
+  if (total === 0 || totalPages <= 1) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border">
+      <p className="text-sm text-muted-foreground">
+        Page {currentPage + 1} of {totalPages} · {total} total
+      </p>
+      <div className="flex gap-1 flex-wrap">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={currentPage === 0}
+          onClick={() => onPageChange(currentPage - 1)}
+        >
+          Prev
+        </Button>
+        {visiblePages.map((p) => (
+          <Button
+            key={p}
+            type="button"
+            size="sm"
+            variant={p === currentPage ? "default" : "outline"}
+            onClick={() => onPageChange(p)}
+          >
+            {p + 1}
+          </Button>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={currentPage >= totalPages - 1}
+          onClick={() => onPageChange(currentPage + 1)}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function TeacherAssignTable({
+  teachers,
+  vacancy,
+  assigningIds,
+  onAssign,
+}: {
+  teachers: Teacher[];
+  vacancy: VacancyTypeById;
+  assigningIds: Record<string, boolean>;
+  onAssign: (t: Teacher) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-border overflow-hidden">
+      <TooltipProvider>
+        <div className="max-h-[420px] overflow-auto">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-background">
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="w-[220px] text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Name
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Contact
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Location
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Status
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Documents
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Coords
+                </TableHead>
+                <TableHead className="w-[160px]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {teachers.map((t) => {
+                const coords =
+                  Number.isFinite(t.lat ?? NaN) && Number.isFinite(t.long ?? NaN)
+                    ? `${(t.lat as number).toFixed(4)}, ${(t.long as number).toFixed(4)}`
+                    : "—";
+                const isAssigning = assigningIds[t.id] ?? false;
+                const isAlreadyAssigned = vacancy.assigned_to === t.id;
+
+                return (
+                  <TableRow
+                    key={t.id}
+                    className={`border-border hover:bg-muted/40 transition-colors ${
+                      isAlreadyAssigned ? "bg-emerald-50/50 dark:bg-emerald-950/10" : ""
+                    }`}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary text-xs font-bold">
+                          {t.name?.charAt(0)?.toUpperCase() ?? "T"}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-foreground leading-tight truncate">
+                            {t.name}
+                            {isAlreadyAssigned && (
+                              <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full">
+                                <UserCheck className="w-2.5 h-2.5" />
+                                Assigned
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground capitalize">{t.gender}</div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Phone className="w-3 h-3" />
+                        {t.phone}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground max-w-[180px] truncate cursor-default">
+                            <MapPin className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{t.location}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="rounded-xl text-xs max-w-[340px]">
+                          <p className="font-medium text-foreground">{t.location}</p>
+                          {t.location_hint && (
+                            <p className="text-muted-foreground">{t.location_hint}</p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className="rounded-full text-[11px] font-semibold capitalize"
+                      >
+                        {t.status ?? "—"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {t.cv_link ? (
+                          <a
+                            href={t.cv_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-primary hover:underline underline-offset-2"
+                          >
+                            CV
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/50 italic">—</span>
+                        )}
+                        {t.transcript_link && (
+                          <a
+                            href={t.transcript_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-primary hover:underline underline-offset-2"
+                          >
+                            Transcript
+                          </a>
+                        )}
+                        {t.addition_link && (
+                          <a
+                            href={t.addition_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-primary hover:underline underline-offset-2"
+                          >
+                            Additional
+                          </a>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground">{coords}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={isAssigning || isAlreadyAssigned}
+                        onClick={() => onAssign(t)}
+                        className={`rounded-xl gap-1.5 ${
+                          isAlreadyAssigned
+                            ? "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100 cursor-default"
+                            : ""
+                        }`}
+                        variant={isAlreadyAssigned ? "ghost" : "default"}
+                      >
+                        {isAssigning ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Assigning…
+                          </>
+                        ) : isAlreadyAssigned ? (
+                          <>
+                            <UserCheck className="w-3 h-3" />
+                            Assigned
+                          </>
+                        ) : (
+                          <>
+                            <UserCheck className="w-3 h-3" />
+                            Assign
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
@@ -635,6 +926,7 @@ interface SearchPanelProps {
 }
 
 function SearchPanel({ vacancy, vacancyId, onAssignSuccess }: SearchPanelProps) {
+  const [primaryTab, setPrimaryTab] = useState<PrimaryTeacherTab>("nearby");
   const [mode, setMode] = useState<SearchMode>("vacancy");
   const [searchLat, setSearchLat] = useState("");
   const [searchLon, setSearchLon] = useState("");
@@ -647,27 +939,59 @@ function SearchPanel({ vacancy, vacancyId, onAssignSuccess }: SearchPanelProps) 
   >([]);
   const locationDebounceRef = useRef<number | null>(null);
 
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [searched, setSearched] = useState(false);
-  const [request, setRequest] = useState<{
+  const [nearbyRun, setNearbyRun] = useState(false);
+  const [nearbySearched, setNearbySearched] = useState(false);
+  const [nearbyPage, setNearbyPage] = useState(0);
+  const [nearbyLimit, setNearbyLimit] = useState(DEFAULT_TEACHER_LIST_LIMIT);
+  const [nearbyRequest, setNearbyRequest] = useState<{
     lat?: number;
     lon?: number;
     location?: string;
   }>({});
-  const [runSearch, setRunSearch] = useState(false);
 
-  // Per-teacher assigning state: { [teacherId]: boolean }
+  const [manualRun, setManualRun] = useState(false);
+  const [manualSearched, setManualSearched] = useState(false);
+  const [manualPage, setManualPage] = useState(0);
+  const [manualLimit, setManualLimit] = useState(DEFAULT_TEACHER_LIST_LIMIT);
+  const [manualSearchDraft, setManualSearchDraft] = useState("");
+  const [manualPhoneDraft, setManualPhoneDraft] = useState("");
+  const [manualApplied, setManualApplied] = useState({ search: "", phone: "" });
+
   const [assigningIds, setAssigningIds] = useState<Record<string, boolean>>({});
 
   const nearbyQuery = useGetNearbyTeachers(
-    vacancyId,
-    request.lat,
-    request.lon,
-    request.location,
-    { enabled: runSearch }
+    {
+      vacancyId,
+      page: nearbyPage,
+      limit: nearbyLimit,
+      lat: nearbyRequest.lat,
+      lon: nearbyRequest.lon,
+      location: nearbyRequest.location,
+      search: "",
+      phone: "",
+    },
+    { enabled: nearbyRun }
   );
 
-  const searching = nearbyQuery.isFetching;
+  const manualQuery = useGetTeachersManully(
+    {
+      search: manualApplied.search,
+      phone: manualApplied.phone,
+      page: manualPage,
+      limit: manualLimit,
+    },
+    { enabled: manualRun }
+  );
+
+  const nearbyTeachers = nearbyQuery.data?.teachers ?? [];
+  const nearbyTotal = nearbyQuery.data?.total ?? 0;
+  const nearbySearching = nearbyQuery.isFetching;
+
+  const manualTeachers = manualQuery.data?.teachers ?? [];
+  const manualTotal = manualQuery.data?.total ?? 0;
+  const manualSearching = manualQuery.isFetching;
+
+  const searching = primaryTab === "nearby" ? nearbySearching : manualSearching;
 
   // ── Assign teacher ──────────────────────────────────────────────────────────
   const handleAssignTuition = async (teacher: Teacher) => {
@@ -789,8 +1113,7 @@ function SearchPanel({ vacancy, vacancyId, onAssignSuccess }: SearchPanelProps) 
     };
   }, [mode, searchLocation]);
 
-  const handleSearch = async () => {
-    setSearched(false);
+  const handleNearbySearch = async () => {
     try {
       let lat: number | undefined;
       let lon: number | undefined;
@@ -845,17 +1168,23 @@ function SearchPanel({ vacancy, vacancyId, onAssignSuccess }: SearchPanelProps) 
         }
       }
 
-      setRequest({ lat, lon, location });
-      setRunSearch(true);
-      const res = await nearbyQuery.refetch();
-      const payload = res.data as unknown as { teachers?: unknown };
-      setTeachers(
-        Array.isArray(payload?.teachers) ? (payload.teachers as Teacher[]) : []
-      );
-      setSearched(true);
+      setNearbyRequest({ lat, lon, location });
+      setNearbyPage(0);
+      setNearbyRun(true);
+      setNearbySearched(true);
     } catch {
       toast.error("Failed to search teachers");
     }
+  };
+
+  const applyManualSearch = () => {
+    setManualApplied({
+      search: manualSearchDraft.trim(),
+      phone: manualPhoneDraft.trim(),
+    });
+    setManualPage(0);
+    setManualRun(true);
+    setManualSearched(true);
   };
 
   const hasCustomCoords =
@@ -868,440 +1197,394 @@ function SearchPanel({ vacancy, vacancyId, onAssignSuccess }: SearchPanelProps) 
     if (searchLocation.trim().length === 0) setLocationOptions([]);
   }, [searchLocation]);
 
+  useEffect(() => {
+    if (nearbyQuery.isError) toast.error("Failed to load nearby teachers");
+  }, [nearbyQuery.isError]);
+
+  useEffect(() => {
+    if (manualQuery.isError) toast.error("Failed to load teachers");
+  }, [manualQuery.isError]);
+
+  const mapTuitionLat =
+    mode === "custom" &&
+    nearbyRequest.lat != null &&
+    Number.isFinite(nearbyRequest.lat)
+      ? nearbyRequest.lat
+      : vacancy.lat;
+  const mapTuitionLon =
+    mode === "custom" &&
+    nearbyRequest.lon != null &&
+    Number.isFinite(nearbyRequest.lon)
+      ? nearbyRequest.lon
+      : vacancy.lon;
+
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
       <div className="px-5 py-4 border-b border-border bg-muted/30">
         <h2 className="text-sm font-semibold tracking-tight flex items-center gap-2">
           <Search className="w-4 h-4 text-primary" />
-          Search Nearby Teachers
+          Find teachers
           <Badge variant="outline" className="ml-auto text-[10px]">
-            5 km radius
+            Nearby: 3 km
           </Badge>
         </h2>
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Mode toggle */}
-        <div className="flex gap-2 p-1 rounded-xl bg-muted w-fit">
+        <div className="flex flex-wrap gap-2 p-1 rounded-xl bg-muted w-fit">
           <button
+            type="button"
             onClick={() => {
-              setMode("vacancy");
-              setSearched(false);
+              setPrimaryTab("nearby");
             }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${mode === "vacancy"
-              ? "bg-background shadow text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-              }`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              primaryTab === "nearby"
+                ? "bg-background shadow text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             <MapPin className="w-3 h-3 inline-block mr-1.5 -mt-0.5" />
-            Vacancy location
+            Nearby (3 km)
           </button>
           <button
+            type="button"
             onClick={() => {
-              setMode("custom");
-              setSearched(false);
+              setPrimaryTab("manual");
             }}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${mode === "custom"
-              ? "bg-background shadow text-foreground"
-              : "text-muted-foreground hover:text-foreground"
-              }`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              primaryTab === "manual"
+                ? "bg-background shadow text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <Navigation className="w-3 h-3 inline-block mr-1.5 -mt-0.5" />
-            Custom location
+            <User className="w-3 h-3 inline-block mr-1.5 -mt-0.5" />
+            Manual search
           </button>
         </div>
 
-        {mode === "vacancy" && (
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-primary/5 border border-primary/15 text-sm text-foreground">
-            <MapPin className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-            <span className="font-medium truncate">{vacancy.location}</span>
-            {vacancy.location_hint && (
-              <span className="text-muted-foreground truncate">
-                — {vacancy.location_hint}
-              </span>
-            )}
-            {Number.isFinite(vacancy.lat) && Number.isFinite(vacancy.lon) && (
-              <span className="ml-auto text-[11px] text-muted-foreground flex-shrink-0">
-                {vacancy.lat.toFixed(4)}, {vacancy.lon.toFixed(4)}
-              </span>
-            )}
-          </div>
-        )}
-
-        {mode === "custom" && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div className="relative md:col-span-1">
-                <Input
-                  placeholder="Location name (optional)"
-                  value={searchLocation}
-                  onChange={(e) => setSearchLocation(e.target.value)}
-                />
-                {searchLocation && (
-                  <button
-                    onClick={() => setSearchLocation("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {searchLocation.trim().length >= 3 &&
-                  (locationPicking || locationOptions.length > 0) && (
-                    <div className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
-                      {locationPicking && (
-                        <div className="px-3 py-2 text-xs text-muted-foreground">
-                          Searching locations…
-                        </div>
-                      )}
-                      {!locationPicking &&
-                        locationOptions.map((opt) => (
-                          <button
-                            key={`${opt.lat}-${opt.lon}-${opt.label}`}
-                            type="button"
-                            onClick={() => {
-                              setSearchLocation(opt.label);
-                              setSearchLat(String(opt.lat));
-                              setSearchLon(String(opt.lon));
-                              setLocationOptions([]);
-                            }}
-                            className="w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors"
-                          >
-                            <div className="truncate">{opt.label}</div>
-                            <div className="text-[10px] text-muted-foreground mt-0.5">
-                              {opt.lat.toFixed(5)}, {opt.lon.toFixed(5)}
-                            </div>
-                          </button>
-                        ))}
-                      {!locationPicking && locationOptions.length === 0 && (
-                        <div className="px-3 py-2 text-xs text-muted-foreground">
-                          No matches.
-                        </div>
-                      )}
-                    </div>
-                  )}
-              </div>
-              <Input
-                placeholder="Latitude"
-                type="number"
-                value={searchLat}
-                onChange={(e) => setSearchLat(e.target.value)}
-              />
-              <Input
-                placeholder="Longitude"
-                type="number"
-                value={searchLon}
-                onChange={(e) => setSearchLon(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleUseVacancyLocation}
-              >
-                <MapPin className="w-3.5 h-3.5 mr-1.5" />
-                Use vacancy location
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleMyLocation}
-                disabled={locating}
-              >
-                <Navigation className="w-3.5 h-3.5 mr-1.5" />
-                {locating ? "Detecting…" : "My location"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPickerMap((v) => !v)}
-              >
-                <MapPin className="w-3.5 h-3.5 mr-1.5" />
-                {showPickerMap ? "Close map" : "Pick on map"}
-              </Button>
-              {hasCustomCoords && (
-                <Button
+        {primaryTab === "nearby" && (
+          <>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex gap-2 p-1 rounded-xl bg-muted w-fit">
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearCustomLocation}
-                  className="text-muted-foreground"
+                  onClick={() => {
+                    setMode("vacancy");
+                    setNearbySearched(false);
+                    setNearbyRun(false);
+                  }}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    mode === "vacancy"
+                      ? "bg-background shadow text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
-                  <X className="w-3.5 h-3.5 mr-1" />
-                  Clear
-                </Button>
-              )}
-            </div>
-            {hasCustomCoords && (
-              <div className="flex items-center gap-1.5">
-                <Badge variant="outline" className="text-[11px] font-normal">
-                  <MapPin className="w-3 h-3 mr-1" />
-                  {Number(searchLat).toFixed(5)}, {Number(searchLon).toFixed(5)}
-                  {searchLocation &&
-                    ` — ${searchLocation.slice(0, 60)}${searchLocation.length > 60 ? "…" : ""
-                    }`}
-                </Badge>
+                  <MapPin className="w-3 h-3 inline-block mr-1.5 -mt-0.5" />
+                  Vacancy location
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("custom");
+                    setNearbySearched(false);
+                    setNearbyRun(false);
+                  }}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    mode === "custom"
+                      ? "bg-background shadow text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Navigation className="w-3 h-3 inline-block mr-1.5 -mt-0.5" />
+                  Custom location
+                </button>
               </div>
-            )}
-            {showPickerMap && (
-              <MapPicker
-                initialLat={
-                  searchLat && Number.isFinite(Number(searchLat))
-                    ? Number(searchLat)
-                    : undefined
-                }
-                initialLon={
-                  searchLon && Number.isFinite(Number(searchLon))
-                    ? Number(searchLon)
-                    : undefined
-                }
-                onConfirm={handleMapConfirm}
-                onClose={() => setShowPickerMap(false)}
-              />
-            )}
-          </div>
-        )}
-
-        <Button
-          onClick={handleSearch}
-          disabled={searching}
-          className="gap-1.5 w-full sm:w-auto"
-        >
-          <Search className="w-3.5 h-3.5" />
-          {searching
-            ? "Searching…"
-            : mode === "vacancy"
-              ? "Find teachers near vacancy"
-              : "Find teachers near location"}
-        </Button>
-
-        {searched && (
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-foreground">
-                {teachers.length > 0
-                  ? `${teachers.length} teacher${teachers.length !== 1 ? "s" : ""
-                  } found nearby`
-                  : "No teachers found nearby"}
-              </p>
-              {teachers.length > 0 && (
-                <Badge variant="secondary" className="text-[10px]">
-                  Sorted by distance
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-muted-foreground whitespace-nowrap">Per page</span>
+                <Select
+                  value={String(nearbyLimit)}
+                  onValueChange={(v) => {
+                    setNearbyLimit(Number(v));
+                    setNearbyPage(0);
+                  }}
+                >
+                  <SelectTrigger className="h-9 w-[88px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 20, 30, 50].map((s) => (
+                      <SelectItem key={s} value={String(s)}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {teachers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                <User className="w-10 h-10 mb-3 opacity-20" />
-                <p className="text-sm font-medium">
-                  No teachers found in this area
-                </p>
-                <p className="text-xs mt-1">
-                  Try a different location or expand the search radius
-                </p>
+            {mode === "vacancy" && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-primary/5 border border-primary/15 text-sm text-foreground">
+                <MapPin className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                <span className="font-medium truncate">{vacancy.location}</span>
+                {vacancy.location_hint && (
+                  <span className="text-muted-foreground truncate">— {vacancy.location_hint}</span>
+                )}
+                {Number.isFinite(vacancy.lat) && Number.isFinite(vacancy.lon) && (
+                  <span className="ml-auto text-[11px] text-muted-foreground flex-shrink-0">
+                    {vacancy.lat.toFixed(4)}, {vacancy.lon.toFixed(4)}
+                  </span>
+                )}
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="rounded-xl border border-border overflow-hidden">
-                  <TooltipProvider>
-                    <div className="max-h-[420px] overflow-auto">
-                      <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-background">
-                          <TableRow className="border-border hover:bg-transparent">
-                            <TableHead className="w-[220px] text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              Name
-                            </TableHead>
-                            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              Contact
-                            </TableHead>
-                            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              Location
-                            </TableHead>
-                            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              Status
-                            </TableHead>
-                            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              Documents
-                            </TableHead>
-                            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              Coords
-                            </TableHead>
-                            <TableHead className="w-[160px]" />
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {teachers.map((t) => {
-                            const coords =
-                              Number.isFinite(t.lat ?? NaN) &&
-                                Number.isFinite(t.long ?? NaN)
-                                ? `${(t.lat as number).toFixed(4)}, ${(
-                                  t.long as number
-                                ).toFixed(4)}`
-                                : "—";
-                            const isAssigning = assigningIds[t.id] ?? false;
-                            const isAlreadyAssigned =
-                              vacancy.assigned_to === t.id;
+            )}
 
-                            return (
-                              <TableRow
-                                key={t.id}
-                                className={`border-border hover:bg-muted/40 transition-colors ${isAlreadyAssigned
-                                  ? "bg-emerald-50/50 dark:bg-emerald-950/10"
-                                  : ""
-                                  }`}
+            {mode === "custom" && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div className="relative md:col-span-1">
+                    <Input
+                      placeholder="Location name (optional)"
+                      value={searchLocation}
+                      onChange={(e) => setSearchLocation(e.target.value)}
+                    />
+                    {searchLocation && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchLocation("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {searchLocation.trim().length >= 3 &&
+                      (locationPicking || locationOptions.length > 0) && (
+                        <div className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-background shadow-lg overflow-hidden">
+                          {locationPicking && (
+                            <div className="px-3 py-2 text-xs text-muted-foreground">Searching locations…</div>
+                          )}
+                          {!locationPicking &&
+                            locationOptions.map((opt) => (
+                              <button
+                                key={`${opt.lat}-${opt.lon}-${opt.label}`}
+                                type="button"
+                                onClick={() => {
+                                  setSearchLocation(opt.label);
+                                  setSearchLat(String(opt.lat));
+                                  setSearchLon(String(opt.lon));
+                                  setLocationOptions([]);
+                                }}
+                                className="w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors"
                               >
-                                <TableCell>
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary text-xs font-bold">
-                                      {t.name?.charAt(0)?.toUpperCase() ?? "T"}
-                                    </div>
-                                    <div className="min-w-0">
-                                      <div className="text-sm font-semibold text-foreground leading-tight truncate">
-                                        {t.name}
-                                        {isAlreadyAssigned && (
-                                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full">
-                                            <UserCheck className="w-2.5 h-2.5" />
-                                            Assigned
-                                          </span>
-                                        )}
-                                      </div>
-                                      <div className="text-[11px] text-muted-foreground capitalize">
-                                        {t.gender}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                    <Phone className="w-3 h-3" />
-                                    {t.phone}
-                                  </span>
-                                </TableCell>
-                                <TableCell>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground max-w-[180px] truncate cursor-default">
-                                        <MapPin className="w-3 h-3 shrink-0" />
-                                        <span className="truncate">
-                                          {t.location}
-                                        </span>
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="rounded-xl text-xs max-w-[340px]">
-                                      <p className="font-medium text-foreground">
-                                        {t.location}
-                                      </p>
-                                      {t.location_hint && (
-                                        <p className="text-muted-foreground">
-                                          {t.location_hint}
-                                        </p>
-                                      )}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className="rounded-full text-[11px] font-semibold capitalize"
-                                  >
-                                    {t.status ?? "—"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex flex-col gap-1">
-                                    {t.cv_link ? (
-                                      <a
-                                        href={t.cv_link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-medium text-primary hover:underline underline-offset-2"
-                                      >
-                                        CV
-                                      </a>
-                                    ) : (
-                                      <span className="text-xs text-muted-foreground/50 italic">
-                                        —
-                                      </span>
-                                    )}
-                                    {t.transcript_link && (
-                                      <a
-                                        href={t.transcript_link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-medium text-primary hover:underline underline-offset-2"
-                                      >
-                                        Transcript
-                                      </a>
-                                    )}
-                                    {t.addition_link && (
-                                      <a
-                                        href={t.addition_link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-medium text-primary hover:underline underline-offset-2"
-                                      >
-                                        Additional
-                                      </a>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <span className="text-xs text-muted-foreground">
-                                    {coords}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    disabled={isAssigning || isAlreadyAssigned}
-                                    onClick={() => handleAssignTuition(t)}
-                                    className={`rounded-xl gap-1.5 ${isAlreadyAssigned
-                                      ? "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100 cursor-default"
-                                      : ""
-                                      }`}
-                                    variant={
-                                      isAlreadyAssigned ? "ghost" : "default"
-                                    }
-                                  >
-                                    {isAssigning ? (
-                                      <>
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                        Assigning…
-                                      </>
-                                    ) : isAlreadyAssigned ? (
-                                      <>
-                                        <UserCheck className="w-3 h-3" />
-                                        Assigned
-                                      </>
-                                    ) : (
-                                      <>
-                                        <UserCheck className="w-3 h-3" />
-                                        Assign
-                                      </>
-                                    )}
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </TooltipProvider>
+                                <div className="truncate">{opt.label}</div>
+                                <div className="text-[10px] text-muted-foreground mt-0.5">
+                                  {opt.lat.toFixed(5)}, {opt.lon.toFixed(5)}
+                                </div>
+                              </button>
+                            ))}
+                          {!locationPicking && locationOptions.length === 0 && (
+                            <div className="px-3 py-2 text-xs text-muted-foreground">No matches.</div>
+                          )}
+                        </div>
+                      )}
+                  </div>
+                  <Input
+                    placeholder="Latitude"
+                    type="number"
+                    value={searchLat}
+                    onChange={(e) => setSearchLat(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Longitude"
+                    type="number"
+                    value={searchLon}
+                    onChange={(e) => setSearchLon(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={handleUseVacancyLocation}>
+                    <MapPin className="w-3.5 h-3.5 mr-1.5" />
+                    Use vacancy location
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={handleMyLocation} disabled={locating}>
+                    <Navigation className="w-3.5 h-3.5 mr-1.5" />
+                    {locating ? "Detecting…" : "My location"}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setShowPickerMap((v) => !v)}>
+                    <MapPin className="w-3.5 h-3.5 mr-1.5" />
+                    {showPickerMap ? "Close map" : "Pick on map"}
+                  </Button>
+                  {hasCustomCoords && (
+                    <Button type="button" variant="ghost" size="sm" onClick={clearCustomLocation} className="text-muted-foreground">
+                      <X className="w-3.5 h-3.5 mr-1" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                {hasCustomCoords && (
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="text-[11px] font-normal">
+                      <MapPin className="w-3 h-3 mr-1" />
+                      {Number(searchLat).toFixed(5)}, {Number(searchLon).toFixed(5)}
+                      {searchLocation && ` — ${searchLocation.slice(0, 60)}${searchLocation.length > 60 ? "…" : ""}`}
+                    </Badge>
+                  </div>
+                )}
+                {showPickerMap && (
+                  <MapPicker
+                    initialLat={
+                      searchLat && Number.isFinite(Number(searchLat)) ? Number(searchLat) : undefined
+                    }
+                    initialLon={
+                      searchLon && Number.isFinite(Number(searchLon)) ? Number(searchLon) : undefined
+                    }
+                    onConfirm={handleMapConfirm}
+                    onClose={() => setShowPickerMap(false)}
+                  />
+                )}
+              </div>
+            )}
+
+            <Button
+              type="button"
+              onClick={() => void handleNearbySearch()}
+              disabled={nearbySearching}
+              className="gap-1.5 w-full sm:w-auto"
+            >
+              <Search className="w-3.5 h-3.5" />
+              {nearbySearching
+                ? "Searching…"
+                : mode === "vacancy"
+                  ? "Find teachers near vacancy"
+                  : "Find teachers near location"}
+            </Button>
+
+            {nearbySearched && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <p className="text-sm font-medium text-foreground">
+                    {nearbyTotal > 0
+                      ? `${nearbyTotal} vacant within 3 km · showing ${nearbyTeachers.length} on this page`
+                      : "No teachers found within 3 km"}
+                  </p>
+                  {nearbyTeachers.length > 0 && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      Sorted by distance
+                    </Badge>
+                  )}
                 </div>
 
-                <NearbyTeachersMap
-                  tuitionLat={Number(vacancy.lat)}
-                  tuitionLon={Number(vacancy.lon)}
-                  tuitionLabel={`${vacancy.location}${vacancy.location_hint ? ` — ${vacancy.location_hint}` : ""
-                    }`}
-                  teachers={teachers}
-                />
+                {nearbyTeachers.length === 0 && !nearbySearching ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                    <User className="w-10 h-10 mb-3 opacity-20" />
+                    <p className="text-sm font-medium">No teachers in this radius</p>
+                    <p className="text-xs mt-1">Try another centre or use manual search.</p>
+                  </div>
+                ) : nearbyTeachers.length > 0 ? (
+                  <div className="space-y-4">
+                    <TeacherAssignTable
+                      teachers={nearbyTeachers}
+                      vacancy={vacancy}
+                      assigningIds={assigningIds}
+                      onAssign={handleAssignTuition}
+                    />
+                    <VacancyTeacherPagination
+                      currentPage={nearbyPage}
+                      total={nearbyTotal}
+                      limit={nearbyLimit}
+                      onPageChange={(p) => setNearbyPage(p)}
+                    />
+                    <NearbyTeachersMap
+                      tuitionLat={Number(mapTuitionLat)}
+                      tuitionLon={Number(mapTuitionLon)}
+                      tuitionLabel={
+                        mode === "custom" && searchLocation.trim()
+                          ? searchLocation
+                          : `${vacancy.location}${vacancy.location_hint ? ` — ${vacancy.location_hint}` : ""}`
+                      }
+                      teachers={nearbyTeachers}
+                      totalWithinRadius={nearbyTotal}
+                      pageSize={nearbyLimit}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </>
+        )}
+
+        {primaryTab === "manual" && (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Search vacant teachers by name or email (one box) and optional phone. Pagination matches vacancy list.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <Input
+                placeholder="Name or email contains…"
+                value={manualSearchDraft}
+                onChange={(e) => setManualSearchDraft(e.target.value)}
+              />
+              <Input
+                placeholder="Phone contains…"
+                value={manualPhoneDraft}
+                onChange={(e) => setManualPhoneDraft(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap items-end gap-2">
+              <Button type="button" onClick={applyManualSearch} disabled={manualSearching} className="gap-1.5">
+                <Search className="w-3.5 h-3.5" />
+                {manualSearching ? "Searching…" : "Search teachers"}
+              </Button>
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-[11px] text-muted-foreground whitespace-nowrap">Per page</span>
+                <Select
+                  value={String(manualLimit)}
+                  onValueChange={(v) => {
+                    setManualLimit(Number(v));
+                    setManualPage(0);
+                  }}
+                >
+                  <SelectTrigger className="h-9 w-[88px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 20, 30, 50].map((s) => (
+                      <SelectItem key={s} value={String(s)}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {manualSearched && (
+              <div className="space-y-3 pt-2">
+                <p className="text-sm font-medium text-foreground">
+                  {manualTotal > 0
+                    ? `${manualTotal} match${manualTotal !== 1 ? "es" : ""} · showing ${manualTeachers.length} on this page`
+                    : "No vacant teachers match"}
+                </p>
+                {manualTeachers.length === 0 && !manualSearching ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                    <User className="w-10 h-10 mb-3 opacity-20" />
+                    <p className="text-sm font-medium">No results</p>
+                    <p className="text-xs mt-1">Adjust name, email, or phone filters.</p>
+                  </div>
+                ) : manualTeachers.length > 0 ? (
+                  <>
+                    <TeacherAssignTable
+                      teachers={manualTeachers}
+                      vacancy={vacancy}
+                      assigningIds={assigningIds}
+                      onAssign={handleAssignTuition}
+                    />
+                    <VacancyTeacherPagination
+                      currentPage={manualPage}
+                      total={manualTotal}
+                      limit={manualLimit}
+                      onPageChange={(p) => setManualPage(p)}
+                    />
+                  </>
+                ) : null}
               </div>
             )}
           </div>
@@ -1375,7 +1658,7 @@ export default function VacancyIdPage({ user }: { user: UserType }) {
       no_of_students: updatedData.no_of_students,
       grade: updatedData.grade,
       salary: updatedData.salary,
-      status: vacancy.status,
+      status: updatedData.status,
       time: updatedData.time,
       contact_number: updatedData.contact_number,
       salary_note: updatedData.salary_note ?? "",
@@ -1646,8 +1929,8 @@ export default function VacancyIdPage({ user }: { user: UserType }) {
               icon={<User className="w-4 h-4" />}
               label="Teacher Gender"
               value={
-                vacancy.gender.charAt(0).toUpperCase() + vacancy.gender.slice(1)
-              }
+                  GetGenderText(vacancy.gender)
+                }
             />
             <DetailRow
               icon={<Phone className="w-4 h-4" />}
@@ -1769,7 +2052,7 @@ export default function VacancyIdPage({ user }: { user: UserType }) {
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline" className="text-xs capitalize">
-                      {vacancy.assigned_teacher.gender}
+                      {GetGenderText(vacancy.assigned_teacher.gender) || "Any"}
                     </Badge>
                     <Badge
                       variant="outline"

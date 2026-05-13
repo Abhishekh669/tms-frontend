@@ -58,6 +58,19 @@ function StatusBadge({ status }: { status: VacancyStatus }) {
   return <Badge variant="outline">{status}</Badge>;
 }
 
+function GetGenderText(gender : GenderType) {
+  switch (gender) {
+    case "male":
+      return "Male";
+    case "female":
+      return "Female";
+    case "other":
+      return "Any";
+    default:
+      return "Any"
+  }
+}
+
 function PaymentBadge({ status }: { status: PaymentStatus }) {
   return <Badge variant="secondary">{status}</Badge>;
 }
@@ -718,7 +731,7 @@ export default function VacancyManagementPage() {
                     </div>
                   </TableCell>
                   <TableCell>{v.grade}</TableCell>
-                  <TableCell>{v.gender}</TableCell>
+                  <TableCell>{GetGenderText(v.gender)}</TableCell>
                   <TableCell>{v.no_of_students}</TableCell>
                   <TableCell>NPR {v.salary}</TableCell>
                   <TableCell>

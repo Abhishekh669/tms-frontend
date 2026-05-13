@@ -32,6 +32,7 @@ import {
   Mail,
   RotateCcw,
   Trash2,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadThing } from "@/utils/uploadthing/uploadthing.client";
@@ -106,8 +107,7 @@ export interface TeacherPayload {
 const STORAGE_KEY = "teacher-form-draft";
 const PREVIEWS_KEY = "teacher-form-previews";
 
-// ─── Safe file validator (run BEFORE FileReader / object URL) ─────────────────
-// Returns an error string if invalid, or null if OK.
+// ─── Safe file validator ──────────────────────────────────────────────────────
 function validateFile(file: File): string | null {
   if (!file.type.startsWith("image/")) {
     return "Only image files (JPG, PNG, WEBP) are accepted.";
@@ -153,9 +153,6 @@ function FileDropZone({
     if (dropped) onSelect(dropped);
   };
 
-  // FIX: Use a visible <label> wrapping the hidden input so mobile browsers
-  // reliably open the file picker without needing JS click() calls,
-  // which are frequently swallowed by mobile WebKit.
   return (
     <Field data-invalid={invalid}>
       <FieldLabel className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60 dark:text-white/50 mb-1.5">
@@ -167,7 +164,6 @@ function FileDropZone({
         )}
       </FieldLabel>
 
-      {/* Use an HTML <label> so tapping anywhere triggers the input — no JS needed */}
       <label
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
@@ -188,7 +184,6 @@ function FileDropZone({
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
               <span className="text-white text-xs font-medium">Replace</span>
             </div>
-            {/* FIX: Stop propagation so the X button doesn't also trigger file picker */}
             <button
               type="button"
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
@@ -215,7 +210,6 @@ function FileDropZone({
           </div>
         )}
 
-        {/* Hidden input is INSIDE the label — mobile browsers wire the tap automatically */}
         <input
           ref={inputRef}
           type="file"
@@ -224,7 +218,6 @@ function FileDropZone({
           disabled={disabled}
           onChange={(e) => {
             const f = e.target.files?.[0];
-            // Reset input value so the same file can be re-selected after removal
             e.target.value = "";
             if (f) onSelect(f);
           }}
@@ -387,16 +380,34 @@ export default function TeacherFormPage() {
     }
   };
 
-  // ─── Full clear ──────────────────────────────────────────────────────────
+  // ─── Clear All — wipes everything including uploaded files on the server ──
   const handleClearAll = async () => {
     await cleanupUploadedImages();
     setCvFile(null); setCvPreview("");
     setTranscriptFile(null); setTranscriptPreview("");
     setAdditionFile(null); setAdditionPreview("");
-    form.reset({ name: "", email: "", phone: "", gender: undefined, location: "", location_hint: "", lat: undefined, long: undefined });
+    form.reset({
+      name: "", email: "", phone: "", gender: undefined,
+      location: "", location_hint: "", lat: undefined, long: undefined,
+    });
     sessionStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(PREVIEWS_KEY);
     toast.success("All data cleared");
+  };
+
+  // ─── Reset — clears fields & uploaded file previews but keeps nothing ────
+  const handleReset = () => {
+    form.reset({
+      name: "", email: "", phone: "", gender: undefined,
+      location: "", location_hint: "", lat: undefined, long: undefined,
+    });
+    setCvFile(null); setCvPreview("");
+    setTranscriptFile(null); setTranscriptPreview("");
+    setAdditionFile(null); setAdditionPreview("");
+    setShowMap(false);
+    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(PREVIEWS_KEY);
+    toast.info("Form reset — please fill in your details again.");
   };
 
   // ─── File utils ──────────────────────────────────────────────────────────
@@ -407,8 +418,6 @@ export default function TeacherFormPage() {
       r.readAsDataURL(file);
     });
 
-  // FIX: Validate FIRST before doing anything with the file.
-  // This prevents large images from crashing the page (no FileReader / object URL created).
   const handleFileSelect = async (
     file: File,
     field: "cv_file" | "transcript_file" | "addition_file",
@@ -416,14 +425,11 @@ export default function TeacherFormPage() {
     setPreview: (p: string) => void,
     urlKey: "cv" | "transcript" | "addition"
   ) => {
-    // ── Validate before touching anything ────────────────────────────────
     const validationError = validateFile(file);
     if (validationError) {
       toast.error(validationError, { duration: 4000 });
-      return; // Stop here — no FileReader, no preview, no crash
+      return;
     }
-
-    // Safe from here: delete old slot, create preview
     const prev = uploadedUrlsRef.current[urlKey];
     if (prev) {
       await removeMultipleImages([prev]);
@@ -451,7 +457,6 @@ export default function TeacherFormPage() {
   };
 
   // ─── Location helpers ────────────────────────────────────────────────────
-  // FIX: Show a descriptive toast guiding mobile users to enable location.
   const handleUseMyLocation = () => {
     if (!navigator.geolocation) {
       toast.error("Geolocation is not supported by your browser.");
@@ -481,25 +486,18 @@ export default function TeacherFormPage() {
       },
       (err) => {
         setLocating(false);
-        // FIX: Specific, actionable messages per error code
         if (err.code === 1) {
-          // PERMISSION_DENIED
           toast.error(
             "Location access was denied. On your phone, go to Settings → Browser → Location → Allow, then try again.",
             { duration: 7000 }
           );
         } else if (err.code === 2) {
-          // POSITION_UNAVAILABLE
           toast.error("Could not determine your location. Make sure your GPS / mobile data is on.", { duration: 5000 });
         } else {
           toast.error("Location request timed out. Please try again or type your area manually.", { duration: 5000 });
         }
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
@@ -645,7 +643,6 @@ export default function TeacherFormPage() {
           </p>
         </div>
 
-        {/* FIX: suppress the native HTML form submission so all interaction goes through RHF */}
         <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
 
           {/* ── Step 1: Personal ── */}
@@ -687,8 +684,6 @@ export default function TeacherFormPage() {
                 )}
               />
 
-              {/* FIX: Gender Select — wrap SelectTrigger in a div with higher z-index
-                  so the mobile tap target is never obscured by adjacent elements. */}
               <Controller
                 name="gender"
                 control={form.control}
@@ -703,11 +698,7 @@ export default function TeacherFormPage() {
                         >
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
-                        <SelectContent
-                          // FIX: Render in a portal so it's never clipped by overflow:hidden parents
-                          position="popper"
-                          className="z-50"
-                        >
+                        <SelectContent position="popper" className="z-50">
                           <SelectItem value="male">Male</SelectItem>
                           <SelectItem value="female">Female</SelectItem>
                           <SelectItem value="other">Other</SelectItem>
@@ -775,7 +766,6 @@ export default function TeacherFormPage() {
                           )}
                       </div>
 
-                      {/* FIX: "My Location" button — larger touch target + hint banner below */}
                       <Button
                         type="button"
                         variant="outline"
@@ -794,7 +784,6 @@ export default function TeacherFormPage() {
                       </Button>
                     </div>
 
-                    {/* FIX: Mobile location tip — always visible so users know to enable GPS */}
                     <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground flex items-start gap-1.5">
                       <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5 text-blue-500" />
                       <span>
@@ -833,7 +822,6 @@ export default function TeacherFormPage() {
                   Pin on Map <span className="normal-case tracking-normal font-normal text-muted-foreground ml-1">optional</span>
                 </FieldLabel>
                 <div className="flex flex-wrap gap-2">
-                  {/* FIX: Map button — use min touch target size (44px) and touch-manipulation */}
                   <Button
                     type="button"
                     variant="outline"
@@ -929,7 +917,7 @@ export default function TeacherFormPage() {
           <StepSection
             step={3}
             title="Documents"
-            description={`CV and transcript required. Certificate is optional. Max ${MAX_FILE_LABEL} per file.`}
+            description={`CV and transcript are required. Max ${MAX_FILE_LABEL} per file. If any upload error occurs, tap Reset below and fill the form again.`}
           >
             <FieldGroup className="gap-5">
               {showFileWarning && (
@@ -938,6 +926,7 @@ export default function TeacherFormPage() {
                   <span>Page was refreshed — please re-upload your CV and transcript.</span>
                 </div>
               )}
+
               <FileDropZone
                 label="CV / Resume"
                 hint={`JPG, PNG, WEBP · Max ${MAX_FILE_LABEL}`}
@@ -949,6 +938,7 @@ export default function TeacherFormPage() {
                 onSelect={(f) => handleFileSelect(f, "cv_file", setCvFile, setCvPreview, "cv")}
                 onRemove={() => handleFileRemove("cv_file", setCvFile, setCvPreview, "cv")}
               />
+
               <FileDropZone
                 label="Class 12 Transcript"
                 hint={`JPG, PNG, WEBP · Max ${MAX_FILE_LABEL}`}
@@ -960,9 +950,11 @@ export default function TeacherFormPage() {
                 onSelect={(f) => handleFileSelect(f, "transcript_file", setTranscriptFile, setTranscriptPreview, "transcript")}
                 onRemove={() => handleFileRemove("transcript_file", setTranscriptFile, setTranscriptPreview, "transcript")}
               />
+
+              {/* ── Additional Document with note ── */}
               <FileDropZone
                 label="Additional Document"
-                hint={`Supporting certificate · JPG, PNG, WEBP · Max ${MAX_FILE_LABEL}`}
+                hint={`JPG, PNG, WEBP · Max ${MAX_FILE_LABEL}`}
                 file={additionFile}
                 preview={additionPreview}
                 disabled={saving}
@@ -972,64 +964,96 @@ export default function TeacherFormPage() {
                 onSelect={(f) => handleFileSelect(f, "addition_file", setAdditionFile, setAdditionPreview, "addition")}
                 onRemove={() => handleFileRemove("addition_file", setAdditionFile, setAdditionPreview, "addition")}
               />
+
+              {/* Bachelor's preferred note + error recovery hint */}
+              <div className="rounded-xl border border-blue-200/60 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-950/20 px-3 py-3 -mt-2 space-y-1.5">
+                <div className="flex items-start gap-2">
+                  <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" />
+                  <p className="text-[11px] leading-relaxed text-blue-700 dark:text-blue-300">
+                    <strong>Bachelor&apos;s degree certificate is preferred</strong> as the additional document — it strengthens your profile and improves matching chances.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-blue-400 dark:text-blue-500" />
+                  <p className="text-[11px] leading-relaxed text-blue-600 dark:text-blue-400">
+                    If you get an upload error here, tap{" "}
+                    <strong>Reset</strong> at the bottom and re-fill the form — it clears any stuck state and lets you try again cleanly.
+                  </p>
+                </div>
+              </div>
+
             </FieldGroup>
           </StepSection>
 
-          {/* ── Footer Buttons okie ── */}
-          <div className="pt-2 pb-10 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
-            <div className="flex gap-2 sm:gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving}
-                onClick={handleClearAll}
-                className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl text-sm px-4 border-destructive/30 text-destructive hover:bg-destructive/10 gap-2 touch-manipulation"
-                style={{ WebkitTapHighlightColor: "transparent" }}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Clear all</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving}
-                onClick={() => {
-                  form.reset();
-                  setCvFile(null); setCvPreview("");
-                  setTranscriptFile(null); setTranscriptPreview("");
-                  setAdditionFile(null); setAdditionPreview("");
-                  setShowMap(false);
-                  sessionStorage.removeItem(STORAGE_KEY);
-                  sessionStorage.removeItem(PREVIEWS_KEY);
-                  toast.info("Form reset");
-                }}
-                className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl text-sm px-4 border-border/60 dark:border-white/10 gap-2 touch-manipulation"
-                style={{ WebkitTapHighlightColor: "transparent" }}
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset</span>
-              </Button>
+          {/* ── Footer Buttons ── */}
+          <div className="pt-2 pb-10">
+
+            {/* Button legend — tells users what each button does */}
+            <div className="mb-3 rounded-xl border border-border/50 dark:border-white/8 bg-muted/30 dark:bg-white/[0.02] px-3.5 py-3 space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground dark:text-white/30 mb-2">
+                Button guide
+              </p>
+              <div className="flex items-start gap-2">
+                <RotateCcw className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground" />
+                <p className="text-[11px] text-muted-foreground dark:text-white/40 leading-relaxed">
+                  <strong className="text-foreground dark:text-white/70">Reset</strong> — clears all fields and uploaded file previews so you can start fresh. Use this if you encounter any errors.
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <Trash2 className="w-3 h-3 flex-shrink-0 mt-0.5 text-destructive/70" />
+                <p className="text-[11px] text-muted-foreground dark:text-white/40 leading-relaxed">
+                  <strong className="text-foreground dark:text-white/70">Clear all</strong> — same as Reset, but also permanently deletes any files already uploaded to the server. Use this only if you want to start completely over.
+                </p>
+              </div>
             </div>
 
-            <Button
-              type="submit"
-              disabled={saving || isFileMissing}
-              className="w-full sm:w-auto h-12 sm:h-10 rounded-xl text-sm font-semibold px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-50 gap-2 transition-all touch-manipulation"
-              style={{ WebkitTapHighlightColor: "transparent" }}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Submitting…
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  Submit Registration
-                </>
-              )}
-            </Button>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={handleClearAll}
+                  className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl text-sm px-4 border-destructive/30 text-destructive hover:bg-destructive/10 gap-2 touch-manipulation"
+                  style={{ WebkitTapHighlightColor: "transparent" }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear all</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={handleReset}
+                  className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl text-sm px-4 border-border/60 dark:border-white/10 gap-2 touch-manipulation"
+                  style={{ WebkitTapHighlightColor: "transparent" }}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset</span>
+                </Button>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={saving || isFileMissing}
+                className="w-full sm:w-auto h-12 sm:h-10 rounded-xl text-sm font-semibold px-8 bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-50 gap-2 transition-all touch-manipulation"
+                style={{ WebkitTapHighlightColor: "transparent" }}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting…
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Submit Registration
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
+
         </form>
       </div>
     </div>

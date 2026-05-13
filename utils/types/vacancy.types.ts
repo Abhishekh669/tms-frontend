@@ -163,6 +163,15 @@ export type CreateVacancy = {
 };
 
 // update
+/** Allowed vacancy lifecycle values (aligned with backend `vacancy_status_type`). */
+export const VACANCY_STATUSES: VacancyStatus[] = [
+  "open",
+  "assigned",
+  "ongoing",
+  "completed",
+  "cancelled",
+];
+
 export type UpdateVacancy = {
   id: string;
   title: string;
@@ -228,4 +237,50 @@ export interface UpdatePaymentInVacancy{
   payment_done : number;
   amount_to_be_paid : number;
   remaining_amount : number;
+}
+
+
+export interface GetTeacherForVacancy {
+  search?: string;
+  phone?: string;
+  limit: number;
+  page: number;
+}
+
+export const pickGetTeacherForVacancy = (q: GetTeacherForVacancy): GetTeacherForVacancy => ({
+  search: String(q.search ?? ""),
+  phone: String(q.phone ?? ""),
+  limit: Number(q.limit ?? 20),
+  page: Number(q.page ?? 0),
+});
+
+/** Query for GET /search-teachers-for-vacancy/:vacancy_id (geo + optional text filters, paginated). */
+export type TeachersNearVacancyQuery = {
+  vacancyId: string;
+  page: number;
+  limit: number;
+  lat?: number;
+  lon?: number;
+  location?: string;
+  search?: string;
+  phone?: string;
+};
+
+export const pickTeachersNearVacancyQuery = (q: TeachersNearVacancyQuery): TeachersNearVacancyQuery => ({
+  vacancyId: String(q.vacancyId ?? ""),
+  page: Number(q.page ?? 0),
+  limit: Number(q.limit ?? 20),
+  lat: q.lat,
+  lon: q.lon,
+  location: q.location != null && q.location !== "" ? String(q.location) : undefined,
+  search: String(q.search ?? ""),
+  phone: String(q.phone ?? ""),
+});
+
+
+export interface TeachersNearVacancyListResponse {
+  teachers : Teacher[];
+  total : number;
+  has_more : boolean;
+  next_offset : number;
 }

@@ -4,14 +4,87 @@ import { get_cookies } from "@/utils/helper/get-cookies";
 import { getErrorMessage } from "@/utils/helper/get.error.message";
 import { Teacher } from "@/utils/types/teacher.types";
 import {
+  GetTeacherForVacancy,
+  pickGetTeacherForVacancy,
   pickVacancyQuery,
+  TeachersNearVacancyListResponse,
   VacancyListResponse,
   VacancyQuery,
   VacancyTypeById,
 } from "@/utils/types/vacancy.types";
 import axios from "axios";
 
-export const searchTeachersForVacancy = async( vacancyId : string, lat?: number, lon?: number, location?: string) => {
+export const getTeacherForVacancy = async (query: GetTeacherForVacancy) => {
+  const q = pickGetTeacherForVacancy(query);
+  try {
+    const user_token = await get_cookies("user_token");
+    if (!user_token) {
+      throw new Error("unauthorized user");
+    }
+    const res = await axios.get(
+      `${process.env.NEXT_BACKEND_URL}/api/v1/vacancy-service/get-teacher-for-vacancy`,
+      {
+        params: {
+          page: q.page,
+          limit: q.limit,
+          search: q.search || undefined,
+          phone: q.phone || undefined,
+        },
+        headers: { Authorization: `Bearer ${user_token}` },
+        withCredentials: true,
+      }
+    );
+    const data = res.data;
+    const payload = data?.payload;
+    if (!data?.success || !payload) {
+      throw new Error(data?.error || "failed to get teachers for vacancy");
+    }
+    const raw =
+      payload?.teacherSearchResponse ?? payload?.teachersSearchResponse;
+    const teacherSearchResponse = raw as TeachersNearVacancyListResponse | undefined;
+    if (!teacherSearchResponse) {
+      throw new Error("failed to get teacher search response");
+    }
+
+    const teachers: Teacher[] = teacherSearchResponse?.teachers || [];
+    const total: number = teacherSearchResponse?.total || 0;
+    const has_more: boolean = teacherSearchResponse?.has_more || false;
+    const next_offset: number = teacherSearchResponse?.next_offset || 0;
+
+    return {
+      success: true,
+      teachers,
+      total,
+      has_more,
+      next_offset,
+    };
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+};
+
+export type SearchTeachersForVacancyParams = {
+  vacancyId: string;
+  page?: number;
+  limit?: number;
+  lat?: number;
+  lon?: number;
+  location?: string;
+  search?: string;
+  phone?: string;
+};
+
+export const searchTeachersForVacancy = async (params: SearchTeachersForVacancyParams) => {
+  const {
+    vacancyId,
+    page = 0,
+    limit = 20,
+    lat,
+    lon,
+    location,
+    search = "",
+    phone = "",
+  } = params;
   try {
     const user_token = await get_cookies("user_token");
     if (!user_token) {
@@ -20,7 +93,15 @@ export const searchTeachersForVacancy = async( vacancyId : string, lat?: number,
     const res = await axios.get(
       `${process.env.NEXT_BACKEND_URL}/api/v1/vacancy-service/search-teachers-for-vacancy/${vacancyId}`,
       {
-        params: { lat, lon, location },
+        params: {
+          page,
+          limit,
+          ...(typeof lat === "number" && Number.isFinite(lat) ? { lat } : {}),
+          ...(typeof lon === "number" && Number.isFinite(lon) ? { lon } : {}),
+          ...(location ? { location } : {}),
+          ...(search.trim() ? { search: search.trim() } : {}),
+          ...(phone.trim() ? { phone: phone.trim() } : {}),
+        },
         headers: { Authorization: `Bearer ${user_token}` },
         withCredentials: true,
       }
@@ -30,11 +111,24 @@ export const searchTeachersForVacancy = async( vacancyId : string, lat?: number,
     if (!data?.success || !payload) {
       throw new Error(data?.error || "failed to search teachers for vacancy");
     }
-    const teachers : Teacher[] = payload?.teachers;
-   
+    const raw =
+      payload?.teachersSearchResponse ?? payload?.teacherSearchResponse;
+    const teacherSearchResponse = raw as TeachersNearVacancyListResponse | undefined;
+    if (!teacherSearchResponse) {
+      throw new Error("failed to get teacher search response");
+    }
+
+    const teachers: Teacher[] = teacherSearchResponse?.teachers || [];
+    const total: number = teacherSearchResponse?.total || 0;
+    const has_more: boolean = teacherSearchResponse?.has_more || false;
+    const next_offset: number = teacherSearchResponse?.next_offset || 0;
+
     return {
       success: true,
       teachers,
+      total,
+      has_more,
+      next_offset,
     };
   } catch (error) {
     throw new Error(getErrorMessage(error));

@@ -22,7 +22,6 @@ import {
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import { ModeToggle } from "./toggle-mode";
 
 export const AvailableRoutes = {
@@ -55,14 +54,13 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed, onToggle, user }: AppSidebarProps) {
   const pathname = usePathname();
-  const [activeItem, setActiveItem] = useState<string>("");
 
   if (!user) return null;
 
-  useEffect(() => {
-    const matched = sidebarRoutes.find((r) => r.path === pathname);
-    if (matched) setActiveItem(matched.title);
-  }, [pathname]);
+  // Derive active route purely from the current pathname.
+  // Using startsWith means /vacancy/1234-abc correctly highlights "Vacancy",
+  // and a hard refresh works because we never rely on component state.
+  const activeRoute = sidebarRoutes.find((r) => pathname.startsWith(r.path));
 
   return (
     <TooltipProvider>
@@ -111,12 +109,11 @@ export function AppSidebar({ collapsed, onToggle, user }: AppSidebarProps) {
 
           {sidebarRoutes.map((route) => {
             const Icon = route.icon;
-            const isActive = activeItem.includes(route.title);
+            const isActive = activeRoute?.path === route.path;
 
             const link = (
               <Link
                 href={route.path}
-                onClick={() => setActiveItem(route.title)}
                 className={cn(
                   "relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group",
                   "hover:scale-[1.02] hover:-translate-y-[1px]",

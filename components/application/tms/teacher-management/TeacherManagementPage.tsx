@@ -542,8 +542,8 @@ export default function TeacherManagementPage({ user }: { user: User }) {
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2.5 mb-1">
-                <span className="inline-block w-1 h-5 rounded-full bg-accent" />
-                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-accent">
+                <span className="inline-block w-1 h-5 rounded-full bg-accent dark:bg-white" />
+                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-foreground dark:text-white">
                   Teacher Management
                 </p>
               </div>
