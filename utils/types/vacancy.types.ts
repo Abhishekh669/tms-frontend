@@ -284,3 +284,41 @@ export interface TeachersNearVacancyListResponse {
   has_more : boolean;
   next_offset : number;
 }
+
+
+
+export type TeacherVacancyData = {
+  id: string;
+  title: string;
+  subject: string;
+  gender : GenderType
+  location: string;
+  location_hint: string;
+  lat: number;
+  lon: number;
+  no_of_students: number;
+  grade: string;
+  salary: number;
+  status: VacancyStatus;
+  time: string;
+  code: string;
+  contact_number: string;
+  salary_note: string;
+  commission_charge: number;
+  approved_at?: string | null;
+
+  vacancy_id: string;
+  assigned_to?: string | null;
+  assigned_teacher ?: Teacher | null;
+
+  payment_status: PaymentStatus;
+  amount_to_be_paid: number;
+  payment_done: number;
+  remaining_amount: number;
+
+  payment_created_date: string;
+  payment_updated_date: string;
+
+  created_at: string;
+  updated_at: string;
+};

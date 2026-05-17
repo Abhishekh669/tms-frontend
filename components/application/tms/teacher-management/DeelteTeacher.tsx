@@ -10,7 +10,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
@@ -19,8 +18,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Pencil, Trash2, Loader2, CheckCircle2, Clock } from "lucide-react";
+import {
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Loader2,
+  CheckCircle2,
+  Clock,
+  BriefcaseBusiness,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/utils/helper/get.error.message";
 import { deleteTeacherById } from "@/utils/action/teacher/teacher.delete";
@@ -29,12 +41,15 @@ import UpdateTeacherData from "./UpdateTeacherData";
 import { updateTeacherStatus } from "@/utils/action/teacher/teacher.put";
 import { useQueryClient } from "@tanstack/react-query";
 import { removeMultipleImages } from "@/utils/action/uploadthing/delete.image";
+import TeacherVacanciesDailogBox from "./TeacherVacanciesDailogBox";
 
 // ─── Actions Dropdown ─────────────────────────────────────────────────────────
 export function ActionsDropdown({ teacher }: { teacher: Teacher }) {
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  if(!teacher) return null;
+  const [deleteOpen, setDeleteOpen]         = useState(false);
+  const [editOpen, setEditOpen]             = useState(false);
+  const [vacanciesOpen, setVacanciesOpen]   = useState(false);
+  const [deleting, setDeleting]             = useState(false);
   const [statusUpdating, setStatusUpdating] = useState<null | "vacant" | "on_duty">(null);
 
   const queryClient = useQueryClient();
@@ -42,10 +57,10 @@ export function ActionsDropdown({ teacher }: { teacher: Teacher }) {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      if(teacher.addition_link){
-        await removeMultipleImages([teacher.cv_link,teacher.addition_link,teacher.transcript_link])
+      if (teacher.addition_link) {
+        await removeMultipleImages([teacher.cv_link, teacher.addition_link, teacher.transcript_link]);
       } else {
-        await removeMultipleImages([teacher.cv_link, teacher.transcript_link ]);
+        await removeMultipleImages([teacher.cv_link, teacher.transcript_link]);
       }
       const res = await deleteTeacherById(teacher.id);
       if (!res.success) throw new Error("Failed to delete teacher");
@@ -77,11 +92,21 @@ export function ActionsDropdown({ teacher }: { teacher: Teacher }) {
   return (
     <>
       {/* ── Edit Dialog ── */}
-      <UpdateTeacherData
-        teacher={teacher}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
+      <UpdateTeacherData teacher={teacher} open={editOpen} onOpenChange={setEditOpen} />
+
+      {/* ── Vacancies Dialog ── */}
+      <Dialog open={vacanciesOpen} onOpenChange={setVacanciesOpen}>
+        <DialogContent className="!max-w-5xl w-full p-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <DialogTitle className="sr-only">Vacancies for {teacher.name}</DialogTitle>
+          {vacanciesOpen && (
+            <TeacherVacanciesDailogBox
+              teacher={teacher}
+              open={vacanciesOpen}
+              onClose={() => setVacanciesOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Delete Alert Dialog ── */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -97,16 +122,13 @@ export function ActionsDropdown({ teacher }: { teacher: Teacher }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel
-              disabled={deleting}
-              className="rounded-xl h-9 text-xs"
-            >
+            <AlertDialogCancel disabled={deleting} className="rounded-xl h-9 text-xs">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={deleting}
               onClick={(e) => {
-                e.preventDefault(); // prevent dialog auto-close; we close manually
+                e.preventDefault();
                 handleDelete();
               }}
               className="rounded-xl h-9 text-xs bg-destructive hover:bg-destructive/90 text-destructive-foreground gap-1.5"
@@ -134,7 +156,7 @@ export function ActionsDropdown({ teacher }: { teacher: Teacher }) {
             <MoreVertical className="w-4 h-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44 rounded-xl">
+        <DropdownMenuContent align="end" className="w-48 rounded-xl">
           <DropdownMenuItem
             className="gap-2 text-xs cursor-pointer"
             onClick={() => setEditOpen(true)}
@@ -142,7 +164,17 @@ export function ActionsDropdown({ teacher }: { teacher: Teacher }) {
             <Pencil className="w-3.5 h-3.5" />
             Edit Teacher
           </DropdownMenuItem>
+
+          <DropdownMenuItem
+            className="gap-2 text-xs cursor-pointer"
+            onClick={() => setVacanciesOpen(true)}
+          >
+            <BriefcaseBusiness className="w-3.5 h-3.5" />
+            Vacancies
+          </DropdownMenuItem>
+
           <DropdownMenuSeparator />
+
           {teacher.status === "vacant" ? (
             <DropdownMenuItem
               className="gap-2 text-xs cursor-pointer"
@@ -170,7 +202,9 @@ export function ActionsDropdown({ teacher }: { teacher: Teacher }) {
               Set Vacant
             </DropdownMenuItem>
           )}
+
           <DropdownMenuSeparator />
+
           <DropdownMenuItem
             className="gap-2 text-xs cursor-pointer text-destructive focus:text-destructive"
             onClick={() => setDeleteOpen(true)}

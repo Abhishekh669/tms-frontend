@@ -1,5 +1,7 @@
 // teachers.types.ts
 
+import {  TeacherVacancyData, VacancyStatus, VacancyTypeById } from "./vacancy.types";
+
 export type TeacherStatus = 'vacant' | 'on_duty';
 export type GenderType =  "male" | "female" | "other"
 
@@ -42,7 +44,35 @@ export interface TeacherQuery {
   page: number;
   phone: string;
   search: string;
+  lat: number | null;
+  lon: number | null;
+  location : string;
+  gender: "male" | "female" | "all";
+  status : "vacant" | "on_duty" | "all";
 }
+
+
+export interface TeacherVacancyQuery  {
+  limit : number;
+  page : number;
+  phone : string;
+  payment_status : | "pending"
+  | "partial"
+  | "completed"
+  | "failed" | "all";
+  vacancy_status : VacancyStatus | "all";
+}
+
+export function pickTeacherVacancyQuery(query: TeacherVacancyQuery): TeacherVacancyQuery {
+  return {
+    limit: Number(query.limit),
+    page: Number(query.page),
+    phone: String(query.phone ?? ""),
+    payment_status: String(query.payment_status ?? "all") as TeacherVacancyQuery["payment_status"],
+    vacancy_status: String(query.vacancy_status ?? "all") as TeacherVacancyQuery["vacancy_status"],
+  };
+}
+ 
 
 /** Plain object with only serializable fields for server actions and query keys. */
 export function pickTeacherQuery(query: TeacherQuery): TeacherQuery {
@@ -51,10 +81,13 @@ export function pickTeacherQuery(query: TeacherQuery): TeacherQuery {
     page: Number(query.page),
     phone: String(query.phone ?? ""),
     search: String(query.search ?? ""),
+    location: String(query.location ?? ""),
+    lat: query.lat != null ? Number(query.lat) : null,
+    lon: query.lon != null ? Number(query.lon) : null,
+    status : (query.status ?? "all") as TeacherQuery["status"],
+    gender: (query.gender ?? "all") as TeacherQuery["gender"],
   };
 }
-
-
 
 
 // For API requests (create/update)
@@ -93,4 +126,22 @@ export interface UpdateTeacher {
 export interface UpdateStatusTeacher {
   id: string;
   status: TeacherStatus;
+}
+
+
+export interface TeacherStats {
+  total_vacancies : number;
+  paid_vacancies : number;
+  unpaid_vacancies : number;
+  partial_vacancies : number;
+  total_earned : number;
+  total_pending : number;
+}
+
+export interface TeacherVacancyResponse {
+  vacancies : TeacherVacancyData[];
+  stats : TeacherStats;
+  total : number;
+  has_more : boolean;
+  next_offset : number
 }
