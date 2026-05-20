@@ -768,7 +768,7 @@ function VacancyRecordManagement({
         vacancy_status: "all",
     });
 
-    const { data, isLoading, isError, refetch, isRefetching } =
+    const { data, isLoading, isError, refetch, isRefetching, error } =
         useGetTeacherVacanciesForTeacher(teacher.id, query);
 
     const vacancies = data?.vacancies ?? [];
@@ -802,6 +802,8 @@ function VacancyRecordManagement({
             >
                 Retry
             </Button>
+            <span>ERROR : {JSON.stringify(error)}</span>
+
         </div>
     ) : isLoading ? (
         <MobileCardSkeleton count={query.limit} />
