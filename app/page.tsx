@@ -105,7 +105,7 @@ function Navbar() {
             className="font-extrabold text-[1rem] sm:text-[1.05rem] text-blue-700 dark:text-blue-400 leading-tight"
             style={baloo}
           >
-            Ghar Mai Shikshya
+            GharMai Shikshya
           </p>
           <p className="text-[0.58rem] sm:text-[0.62rem] font-semibold uppercase tracking-widest text-green-700 dark:text-green-400">
             Home Tuition Service
