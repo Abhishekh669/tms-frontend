@@ -12,9 +12,6 @@ export const useGetTeacherVacanciesForTeacher = (id: string, query: TeacherVacan
     queryKey: ["get-teacher-vacancies-for-teacher", id, q.limit, q.page, q.phone, q.payment_status, q.vacancy_status],
     queryFn: () => fetchTeacherVacanciesForTeacher(id, q),
     placeholderData: keepPreviousData,
-      refetchOnWindowFocus: false,   // ❌ stop refetch on tab switch
-    refetchOnReconnect: false,    // ❌ stop refetch on internet reconnect
-    refetchOnMount: false,        // ❌ don't refetch when component remounts
 
     staleTime: 1000 * 60 * 5,     // ✅ data stays fresh for 5 minutes
     gcTime: 1000 * 60 * 10,

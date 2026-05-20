@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import QueryProvider from "@/providers/QueryProvider";
+import { Analytics } from "@vercel/analytics/next"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -62,6 +63,7 @@ export default function RootLayout({
           <QueryProvider>
             {children}
             <Toaster position="top-right" richColors closeButton />
+            <Analytics />
           </QueryProvider>
         </ThemeProvider>
       </body>
