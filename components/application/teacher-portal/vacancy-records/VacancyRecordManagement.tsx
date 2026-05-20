@@ -802,7 +802,6 @@ function VacancyRecordManagement({
             >
                 Retry
             </Button>
-            <span>ERROR : {JSON.stringify(error)}</span>
 
         </div>
     ) : isLoading ? (

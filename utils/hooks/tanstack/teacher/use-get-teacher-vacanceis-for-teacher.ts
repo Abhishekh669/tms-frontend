@@ -1,9 +1,9 @@
-import {  getTeacherVacancies } from "@/utils/action/teacher/teacher.get";
+import {   getTeacherVacanciesForTeacher } from "@/utils/action/teacher/teacher.get";
 import {  pickTeacherVacancyQuery,  TeacherVacancyQuery } from "@/utils/types/teacher.types";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 export const fetchTeacherVacanciesForTeacher = async (id: string, query: TeacherVacancyQuery) => {
-  return getTeacherVacancies(id, pickTeacherVacancyQuery(query));
+  return getTeacherVacanciesForTeacher(id, pickTeacherVacancyQuery(query));
 };
 
 export const useGetTeacherVacanciesForTeacher = (id: string, query: TeacherVacancyQuery) => {
