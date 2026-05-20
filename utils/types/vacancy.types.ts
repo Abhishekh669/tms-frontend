@@ -322,3 +322,28 @@ export type TeacherVacancyData = {
   created_at: string;
   updated_at: string;
 };
+
+
+
+export interface  CreateVacancyRecord {
+  vac_id : string;
+  submitted_date :string;
+  subject : string;
+  full_marks : number;
+  pass_marks : number;
+  student_mark : number;
+  image_link : string;
+  teacher_id : string;
+}
+
+
+export interface  UpdateVacancyRecord {
+  id : string;
+  subject : string;
+  full_marks : number;
+  pass_marks : number;
+  student_mark : number;
+  image_link : string;
+}
+
+

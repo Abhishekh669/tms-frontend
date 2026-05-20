@@ -1,9 +1,27 @@
 // teachers.types.ts
 
-import {  TeacherVacancyData, VacancyStatus, VacancyTypeById } from "./vacancy.types";
+import {  PaymentStatus, TeacherVacancyData, VacancyStatus, VacancyTypeById } from "./vacancy.types";
 
 export type TeacherStatus = 'vacant' | 'on_duty';
 export type GenderType =  "male" | "female" | "other"
+
+export interface SafeTokenTeacherData {
+  id: string; // UUID will be represented as string in TypeScript
+  name: string;
+  gender: GenderType;
+  email: string;
+  phone: string;
+  cvLink: string;
+  transcriptLink: string;
+  additionLink?: string | null; // Optional and can be null
+  location: string;
+  locationHint: string;
+  lat?: number | null; // Optional and can be null
+  long?: number | null; // Optional and can be null
+  status: TeacherStatus;
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
+}
 
 export interface Teacher {
     id: string;                    // UUID
@@ -62,6 +80,21 @@ export interface TeacherVacancyQuery  {
   | "failed" | "all";
   vacancy_status : VacancyStatus | "all";
 }
+export interface TeacherVacancyRecordsQuery{
+  vacancy_id : string;
+  page : number;
+  limit : number;
+}
+
+
+export function pickTeacherVacancyRecordsQuery(query: TeacherVacancyRecordsQuery): TeacherVacancyRecordsQuery {
+  return {
+    vacancy_id: String(query.vacancy_id),
+    page: Number(query.page),
+    limit: Number(query.limit),
+  };
+}
+
 
 export function pickTeacherVacancyQuery(query: TeacherVacancyQuery): TeacherVacancyQuery {
   return {
@@ -145,3 +178,64 @@ export interface TeacherVacancyResponse {
   has_more : boolean;
   next_offset : number
 }
+
+
+
+export interface TeacherVacancyRecordStats {
+  total_records : number;
+  average_mark : number;
+  pass_rate : number;
+}
+
+export interface VacancyRecordType {
+  id : string;
+  vac_id : string;
+  subject : string;
+  submitted_date : string;
+  full_marks : number;
+  pass_marks : number;
+  student_mark: number;
+  image_link : string;
+  verified : boolean;
+  teacher_id : string;
+  created_at : string;
+  percentage : number;
+  is_passed : boolean;
+  }
+
+
+export interface VacancyDataForVacancyRecords {
+  id: string; // UUID
+  title: string;
+  subject: string;
+  gender: GenderType;
+  location: string;
+  location_hint: string;
+  lat: number;
+  lon: number;
+  no_of_students: number;
+  grade: string;
+  salary: number;
+  status: VacancyStatus;
+  time: string;
+  contact_number: string;
+  commission_charge: number;
+  approved_at?: string | null; // ISO date string or null
+  vacancy_id: string; // UUID
+  assigned_to?: string | null; // UUID or null
+  payment_status: PaymentStatus;
+  amount_to_be_paid: number;
+  payment_done: number;
+  remaining_amount: number;
+}
+
+
+export interface VacancyRecordDataResponse {
+  vacancy_details : VacancyDataForVacancyRecords
+  records : VacancyRecordType[]
+  stats : TeacherVacancyRecordStats
+  total : number;
+  has_more : boolean;
+  next_offset : number;
+}
+

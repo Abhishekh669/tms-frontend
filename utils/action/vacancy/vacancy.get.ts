@@ -14,6 +14,9 @@ import {
 } from "@/utils/types/vacancy.types";
 import axios from "axios";
 
+
+
+
 export const getTeacherForVacancy = async (query: GetTeacherForVacancy) => {
   const q = pickGetTeacherForVacancy(query);
   try {

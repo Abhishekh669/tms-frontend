@@ -20,6 +20,7 @@ export const getErrorMessage = (error: unknown): string => {
 
     // Handle case where data is a string
     if (typeof error.response?.data === "string") {
+
       return error.response.data;
     }
 

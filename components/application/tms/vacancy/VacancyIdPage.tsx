@@ -1637,8 +1637,7 @@ export default function VacancyIdPage({ user }: { user: UserType }) {
 
   // ── Shared query invalidation ───────────────────────────────────────────────
   const invalidateVacancy = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["get-vacancy-by-id"] });
-    await queryClient.invalidateQueries({ queryKey: ["get-all-vacancies"] });
+    await queryClient.invalidateQueries({ queryKey: ["get-vacancy-by-id", vacancy.id] });
   };
 
   const handleUpdateVacancy = async (
@@ -1702,6 +1701,7 @@ export default function VacancyIdPage({ user }: { user: UserType }) {
         toast.error(res.error || "Failed to unassign teacher");
         return;
       }
+      queryClient.invalidateQueries({ queryKey: ["get-vacancy-by-id", vacancy.id] });
       toast.success("Teacher unassigned from this vacancy");
       setUnassignOpen(false);
       await invalidateVacancy();
