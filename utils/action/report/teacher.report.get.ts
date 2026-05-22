@@ -28,12 +28,12 @@ export const getVacancyWeeklyPerformance = async(vacancy_id : string) =>{
     const payload   = data?.payload as VacancyWeeklyProgress;
 
 
-    if (!data?.success || !payload) {
+    if (!data?.success ) {
       throw new Error(data?.error || "failed to get teacher overview");
     }
     return {
       success : true,
-      weekly_progress : payload
+      weekly_progress : payload 
     }
 
 

@@ -222,11 +222,22 @@ function WeeklyProgressContent({ vacancyId }: { vacancyId: string }) {
     );
   }
 
-  if (isError || !data?.weekly_progress) {
+  if (isError) {
     return (
       <div className="flex flex-col items-center gap-1.5 py-8 text-center">
         <AlertCircle className="h-6 w-6 text-zinc-300 dark:text-zinc-600" />
         <p className="text-xs text-zinc-400 dark:text-zinc-500">Failed to load. Try again.</p>
+      </div>
+    );
+  }
+
+  // null weekly_progress = vacancy exists but no data yet
+  if (!data?.weekly_progress) {
+    return (
+      <div className="flex flex-col items-center gap-1.5 py-8 text-center">
+        <BookOpen className="h-6 w-6 text-zinc-300 dark:text-zinc-600" />
+        <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">No data yet</p>
+        <p className="text-[10px] text-zinc-300 dark:text-zinc-600">Records appear once tests are submitted</p>
       </div>
     );
   }
