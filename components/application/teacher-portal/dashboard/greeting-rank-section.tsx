@@ -1,7 +1,6 @@
 "use client";
-
 import { TeacherRank } from "@/utils/types/report.types";
-import { SafeTokenTeacherData, } from "@/utils/types/teacher.types";
+import { SafeTokenTeacherData } from "@/utils/types/teacher.types";
 import { Trophy } from "lucide-react";
 
 interface Props {
@@ -18,12 +17,7 @@ function getGreeting() {
 }
 
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 }
 
 function getRankSuffix(rank: number) {
@@ -35,8 +29,8 @@ function getRankSuffix(rank: number) {
 
 export function GreetingRankSection({ teacher, rankData, isLoading }: Props) {
   const firstName = teacher?.name?.split(" ")[0] ?? "Teacher";
-  const initials = getInitials(teacher?.name ?? "T");
-  const isRanked = rankData && rankData.rank > 0;
+  const initials  = getInitials(teacher?.name ?? "T");
+  const isRanked  = rankData && rankData.rank > 0;
 
   return (
     <div className="px-4 pt-5 pb-1 flex items-center gap-3">
@@ -47,17 +41,17 @@ export function GreetingRankSection({ teacher, rankData, isLoading }: Props) {
 
       {/* Name + greeting */}
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-zinc-400 font-medium leading-none mb-0.5">
+        <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium leading-none mb-0.5">
           {getGreeting()}
         </p>
-        <h1 className="text-base font-bold text-zinc-800 leading-tight truncate">
+        <h1 className="text-base font-bold text-zinc-800 dark:text-zinc-100 leading-tight truncate">
           {firstName} 👋
         </h1>
       </div>
 
       {/* Rank chip */}
       {isLoading ? (
-        <div className="h-9 w-24 rounded-xl bg-zinc-100 animate-pulse shrink-0" />
+        <div className="h-9 w-24 rounded-xl bg-zinc-100 dark:bg-zinc-800 animate-pulse shrink-0" />
       ) : isRanked ? (
         <div className="shrink-0 bg-teal-600 rounded-xl px-3 py-1.5 flex items-center gap-1.5">
           <Trophy className="h-3.5 w-3.5 text-teal-100" />
@@ -68,15 +62,13 @@ export function GreetingRankSection({ teacher, rankData, isLoading }: Props) {
                 {getRankSuffix(rankData.rank)}
               </span>
             </div>
-            <p className="text-[9px] text-teal-200 mt-0.5">
-              of {rankData.total_teachers}
-            </p>
+            <p className="text-[9px] text-teal-200 mt-0.5">of {rankData.total_teachers}</p>
           </div>
         </div>
       ) : (
-        <div className="shrink-0 bg-zinc-100 rounded-xl px-3 py-1.5 flex items-center gap-1.5">
-          <Trophy className="h-3.5 w-3.5 text-zinc-400" />
-          <p className="text-[11px] text-zinc-400 font-medium">Unranked</p>
+        <div className="shrink-0 bg-zinc-100 dark:bg-zinc-800 rounded-xl px-3 py-1.5 flex items-center gap-1.5">
+          <Trophy className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium">Unranked</p>
         </div>
       )}
     </div>

@@ -229,7 +229,6 @@ function MobileHeader() {
         "shadow-[0_4px_30px_rgba(0,0,0,0.06)]"
       )}
     >
-      {/* Emerald accent line at bottom of header */}
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
 
       <div className="flex items-center gap-3 px-4 py-3">
@@ -244,12 +243,15 @@ function MobileHeader() {
         </div>
 
         {/* App name */}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="text-sm font-semibold tracking-tight truncate leading-none">
             GharMai Shikshya
           </h1>
           <p className="text-[10px] text-muted-foreground mt-0.5">Teacher Portal</p>
         </div>
+
+        {/* Theme toggle */}
+        <ModeToggle isCollapsed={false} />
       </div>
     </header>
   );
