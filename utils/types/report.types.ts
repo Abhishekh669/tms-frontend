@@ -177,3 +177,95 @@ export interface MonthlySummaryPoint {
   failed: number;
   total: number;
 }
+
+
+
+export interface TeacherDashboardStats {
+  active_vacancies: number; // ongoing+assigned count
+  total_vacancies: number; // all ever assigned
+  total_tests: number; // tests on active vacancies
+  pass_rate: number; // 0-100, avg of per-vac rates
+  commission_due: number;
+}
+
+// ActiveVacancyCard is shown in the "latest 3 active vacancies" component.
+export interface ActiveVacancyCard {
+  id: string;
+  code: string;
+  subject: string;
+  grade: string;
+  salary: number;
+  contact_number: string;
+  location: string;
+  location_hint: string;
+  status: string;
+
+  // Payment progress
+  amount_to_be_paid: number;
+  payment_done: number;
+  remaining_amount: number;
+  payment_status: string;
+}
+
+// Used for the weekly-test dropdown selector.
+export interface ActiveVacancyDropdownItem {
+  id: string;
+  code: string;
+  subject: string;
+  grade: string;
+  status: string;
+
+  // tests submitted for this vacancy so far
+  total_tests: number;
+}
+
+// One weekly test record
+export interface WeeklyTestRecord {
+  id: string;
+  subject: string;
+  submitted_date: string; // ISO date string
+  full_marks: number;
+  pass_marks: number;
+  student_mark: number;
+  gpa: number; // 0.0 – 4.0
+  passed: boolean;
+  image_link: string;
+  verified: boolean;
+}
+
+// Returned when selecting a vacancy from dropdown
+export interface VacancyWeeklyProgress {
+  vacancy_id: string;
+  vacancy_code: string;
+  subject: string;
+  grade: string;
+
+  tests: WeeklyTestRecord[];
+
+  total_tests: number;
+  pass_rate: number; // 0-100
+  avg_gpa: number; // 0-4
+}
+
+// Teacher leaderboard rank
+export interface TeacherRank {
+  teacher_id: string; // UUID
+  rank: number; // 1-based; 0 = not ranked
+  total_teachers: number;
+
+  total_tests: number;
+  avg_pass_rate: number; // 0-100
+  avg_gpa: number; // 0-4
+
+  score: number; // 0-100 composite
+  window_days: number;
+}
+
+
+
+export interface  OverAllDasboardData{
+  dashboard_stats : TeacherDashboardStats
+  active_vacancy_card : ActiveVacancyCard[]
+  active_vacancy_dropdown_item : ActiveVacancyDropdownItem[]
+  teacher_ranking_data : TeacherRank
+} 

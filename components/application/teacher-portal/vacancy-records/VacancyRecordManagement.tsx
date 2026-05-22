@@ -182,160 +182,55 @@ function PaymentProgress({ vacancy }: { vacancy: VacancyTypeById }) {
     );
 }
 
-// ─── Count Grid (mobile) ─────────────────────────────────────────────────────
+// ─── Mini Stats Row (mobile - compact) ─────────────────────────────────────
 
-function CountGrid({ stats }: { stats: TeacherStats }) {
-    const items = [
-        {
-            label: "Total vacancies",
-            value: stats.total_vacancies,
-            icon: <ReceiptText className="w-3.5 h-3.5" />,
-            iconClass: "bg-primary/10 text-primary",
-            valueClass: "text-foreground",
-        },
-        {
-            label: "Fully paid",
-            value: stats.paid_vacancies,
-            icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-            iconClass: "bg-emerald-500/10 text-emerald-600",
-            valueClass: "text-emerald-600",
-        },
-        {
-            label: "Partial payment",
-            value: stats.partial_vacancies,
-            icon: <Clock className="w-3.5 h-3.5" />,
-            iconClass: "bg-amber-500/10 text-amber-600",
-            valueClass: "text-amber-600",
-        },
-        {
-            label: "Unpaid",
-            value: stats.unpaid_vacancies,
-            icon: <AlertCircle className="w-3.5 h-3.5" />,
-            iconClass: "bg-red-500/10 text-red-500",
-            valueClass: "text-red-500",
-        },
-    ];
-
+function MiniStatsRow({ stats }: { stats: TeacherStats }) {
     return (
-        <div className="grid grid-cols-2 gap-2.5 px-4 py-3">
-            {items.map(({ label, value, icon, iconClass, valueClass }) => (
-                <div
-                    key={label}
-                    className="bg-card border border-border rounded-xl p-3.5 flex flex-col gap-2.5"
-                >
-                    <div
-                        className={cn(
-                            "flex h-7 w-7 items-center justify-center rounded-lg",
-                            iconClass
-                        )}
-                    >
-                        {icon}
-                    </div>
-                    <div>
-                        <p className={cn("text-xl font-bold leading-none", valueClass)}>
-                            {value}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground mt-1 leading-tight">
-                            {label}
-                        </p>
-                    </div>
-                </div>
-            ))}
+        <div className="grid grid-cols-4 gap-1 px-3 py-2 bg-muted/5 border-b border-border">
+            <div className="text-center">
+                <p className="text-base font-bold text-foreground">{stats.total_vacancies}</p>
+                <p className="text-[8px] text-muted-foreground uppercase tracking-wide">Total</p>
+            </div>
+            <div className="text-center">
+                <p className="text-base font-bold text-emerald-600">{stats.paid_vacancies}</p>
+                <p className="text-[8px] text-muted-foreground uppercase tracking-wide">Paid</p>
+            </div>
+            <div className="text-center">
+                <p className="text-base font-bold text-amber-600">{stats.partial_vacancies}</p>
+                <p className="text-[8px] text-muted-foreground uppercase tracking-wide">Partial</p>
+            </div>
+            <div className="text-center">
+                <p className="text-base font-bold text-red-500">{stats.unpaid_vacancies}</p>
+                <p className="text-[8px] text-muted-foreground uppercase tracking-wide">Unpaid</p>
+            </div>
         </div>
     );
 }
 
-// ─── Payment Summary Card (mobile) ──────────────────────────────────────────
+// ─── Compact Payment Summary (mobile) ─────────────────────────────────────
 
-function PaymentSummaryCard({ stats }: { stats: TeacherStats }) {
+function CompactPaymentSummary({ stats }: { stats: TeacherStats }) {
     const total = stats.total_earned + stats.total_pending;
-    const paidPercent =
-        total > 0
-            ? Math.round((stats.total_earned / total) * 100)
-            : 0;
+    const paidPercent = total > 0 ? Math.round((stats.total_earned / total) * 100) : 0;
 
     return (
-        <div className="mx-4 mb-1 bg-card border border-border rounded-xl p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-                Payment summary
-            </p>
-            <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <CircleDollarSign className="w-3.5 h-3.5" />
-                        Total salary
-                    </span>
-                    <span className="text-sm font-semibold text-foreground">
-                        Rs. {total.toLocaleString()}
-                    </span>
-                </div>
-                <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                        Paid so far
-                    </span>
-                    <span className="text-sm font-semibold text-emerald-600">
-                        Rs. {stats.total_earned.toLocaleString()}
-                    </span>
-                </div>
-                <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Wallet className="w-3.5 h-3.5 text-red-400" />
-                        Still pending
-                    </span>
-                    <span className="text-sm font-semibold text-red-500">
-                        Rs. {stats.total_pending.toLocaleString()}
-                    </span>
-                </div>
-            </div>
-            <div className="mt-3">
-                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                        className="h-full rounded-full bg-emerald-500 transition-all"
-                        style={{ width: `${paidPercent}%` }}
-                    />
-                </div>
-                <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
-                    <span>{paidPercent}% collected</span>
-                    <span>{100 - paidPercent}% remaining</span>
+        <div className="px-3 py-2 border-b border-border bg-muted/5">
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Commission</span>
+                        <span className="text-[10px] font-bold text-foreground">Rs. {total.toLocaleString()}</span>
+                    </div>
+                    <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${paidPercent}%` }} />
+                    </div>
+                    <div className="flex justify-between mt-1 text-[9px]">
+                        <span className="text-emerald-600">Paid: Rs.{stats.total_earned.toLocaleString()}</span>
+                        <span className="text-red-500">Due: Rs.{stats.total_pending.toLocaleString()}</span>
+                    </div>
                 </div>
             </div>
         </div>
-    );
-}
-
-// ─── Mobile Stats Skeleton ───────────────────────────────────────────────────
-
-function MobileStatsSkeleton() {
-    return (
-        <>
-            <div className="grid grid-cols-2 gap-2.5 px-4 py-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                    <div
-                        key={i}
-                        className="bg-card border border-border rounded-xl p-3.5 flex flex-col gap-2.5"
-                    >
-                        <div className="h-7 w-7 rounded-lg bg-muted animate-pulse" />
-                        <div>
-                            <div className="h-5 w-8 rounded bg-muted animate-pulse" />
-                            <div className="h-3 w-20 rounded bg-muted animate-pulse mt-1" />
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <div className="mx-4 mb-1 bg-card border border-border rounded-xl p-4">
-                <div className="h-3 w-28 rounded bg-muted animate-pulse mb-3" />
-                <div className="space-y-2.5">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                            <div className="h-3 w-24 rounded bg-muted animate-pulse" />
-                            <div className="h-3 w-20 rounded bg-muted animate-pulse" />
-                        </div>
-                    ))}
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-muted animate-pulse mt-3" />
-            </div>
-        </>
     );
 }
 
@@ -463,22 +358,16 @@ function MobileVacancyCard({
             : 0;
 
     return (
-        <div className="bg-card border border-border rounded-xl p-4 space-y-3 shadow-sm">
-            {/* Title + visit */}
+        <div className="bg-card border border-border rounded-xl p-3 space-y-2 shadow-sm">
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-foreground leading-tight truncate">
-                        {vacancy.title}
-                    </p>
-                    <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-                        <BookOpen className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{vacancy.subject}</span>
-                    </div>
+                    <p className="text-sm font-bold text-foreground truncate">{vacancy.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{vacancy.subject}</p>
                 </div>
                 <Button
                     size="sm"
                     variant="outline"
-                    className="h-7 shrink-0 rounded-lg gap-1 text-xs font-semibold px-2.5 border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
+                    className="h-7 rounded-lg gap-1 text-xs font-semibold px-2"
                     onClick={onVisit}
                 >
                     <ExternalLink className="w-3 h-3" />
@@ -486,118 +375,44 @@ function MobileVacancyCard({
                 </Button>
             </div>
 
-            {/* Badges */}
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
                 <VacancyStatusBadge status={vacancy.status} />
                 <PaymentStatusBadge status={vacancy.payment_status} />
             </div>
 
-            {/* Details grid */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3 h-3 shrink-0 text-primary/60" />
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3 shrink-0" />
                     <span className="truncate">{vacancy.location}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <BookOpen className="w-3 h-3 shrink-0 text-primary/60" />
-                    <span>Grade {vacancy.grade}</span>
+                <div className="flex items-center gap-1">
+                    <Users className="w-3 h-3 shrink-0" />
+                    <span>{vacancy.no_of_students} std.</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <Users className="w-3 h-3 shrink-0 text-primary/60" />
-                    <span>{vacancy.no_of_students} students</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <Clock className="w-3 h-3 shrink-0 text-primary/60" />
+                <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 shrink-0" />
                     <span className="truncate">{vacancy.time}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <Hash className="w-3 h-3 shrink-0 text-primary/60" />
-                    <span className="font-mono">{vacancy.code}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3 h-3 shrink-0 text-primary/60" />
-                    <span>
-                        {new Date(vacancy.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                        })}
-                    </span>
+                <div className="flex items-center gap-1">
+                    <span className="font-semibold">Rs.{vacancy.salary.toLocaleString()}</span>
                 </div>
             </div>
 
-            <div className="border-t border-border" />
-
-            {/* Salary + payment progress */}
-            <div className="flex items-start justify-between gap-4">
-                <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
-                        Monthly salary
-                    </p>
-                    <p className="text-sm font-bold text-foreground">
-                        Rs. {vacancy.salary.toLocaleString()}
-                    </p>
-                    {vacancy.salary_note && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-[120px]">
-                            {vacancy.salary_note}
-                        </p>
+            <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                    className={cn(
+                        "h-full rounded-full transition-all",
+                        paidPercent === 100 ? "bg-emerald-500" : paidPercent > 50 ? "bg-amber-500" : "bg-red-400"
                     )}
-                </div>
-                <div className="flex-1 max-w-[170px]">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
-                        Payment progress
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                        <span className="text-emerald-600 font-semibold">
-                            Rs. {vacancy.payment_done.toLocaleString()} paid
-                        </span>
-                        <span
-                            className={cn(
-                                "font-semibold",
-                                vacancy.remaining_amount > 0
-                                    ? "text-red-500"
-                                    : "text-muted-foreground"
-                            )}
-                        >
-                            Rs. {vacancy.remaining_amount.toLocaleString()} due
-                        </span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                            className={cn(
-                                "h-full rounded-full transition-all",
-                                paidPercent === 100
-                                    ? "bg-emerald-500"
-                                    : paidPercent > 50
-                                    ? "bg-amber-500"
-                                    : "bg-red-400"
-                            )}
-                            style={{ width: `${paidPercent}%` }}
-                        />
-                    </div>
-                </div>
+                    style={{ width: `${paidPercent}%` }}
+                />
             </div>
-
-            {/* Assigned teacher */}
-            {vacancy.assigned_to && (
-                <>
-                    <div className="border-t border-border" />
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-bold shrink-0">
-                            {teacher.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-semibold text-foreground truncate">
-                                {teacher.name}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                <Phone className="w-3 h-3 shrink-0" />
-                                <span className="truncate">{teacher.phone}</span>
-                            </p>
-                        </div>
-                    </div>
-                </>
-            )}
+            <div className="flex justify-between text-[10px]">
+                <span className="text-emerald-600 font-semibold">Paid: Rs.{vacancy.payment_done.toLocaleString()}</span>
+                <span className={cn("font-semibold", vacancy.remaining_amount > 0 ? "text-red-500" : "")}>
+                    Due: Rs.{vacancy.remaining_amount.toLocaleString()}
+                </span>
+            </div>
         </div>
     );
 }
@@ -608,33 +423,21 @@ function MobileCardSkeleton({ count }: { count: number }) {
     return (
         <div className="space-y-3 px-4 pb-4">
             {Array.from({ length: count }).map((_, i) => (
-                <div
-                    key={i}
-                    className="bg-card border border-border rounded-xl p-4 space-y-3"
-                >
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1.5 flex-1">
-                            <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
-                            <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
-                        </div>
-                        <div className="h-7 w-16 rounded-lg bg-muted animate-pulse" />
+                <div key={i} className="bg-card border border-border rounded-xl p-3 space-y-2">
+                    <div className="flex gap-2">
+                        <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+                        <div className="h-7 w-16 rounded-lg bg-muted animate-pulse ml-auto" />
                     </div>
                     <div className="flex gap-2">
-                        <div className="h-5 w-20 rounded-full bg-muted animate-pulse" />
-                        <div className="h-5 w-20 rounded-full bg-muted animate-pulse" />
+                        <div className="h-5 w-16 rounded-full bg-muted animate-pulse" />
+                        <div className="h-5 w-16 rounded-full bg-muted animate-pulse" />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         {Array.from({ length: 4 }).map((_, j) => (
                             <div key={j} className="h-3 rounded bg-muted animate-pulse" />
                         ))}
                     </div>
-                    <div className="border-t border-border pt-3 space-y-1.5">
-                        <div className="flex justify-between">
-                            <div className="h-3 w-20 rounded bg-muted animate-pulse" />
-                            <div className="h-3 w-20 rounded bg-muted animate-pulse" />
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-muted animate-pulse" />
-                    </div>
+                    <div className="h-1 rounded-full bg-muted animate-pulse" />
                 </div>
             ))}
         </div>
@@ -794,15 +597,9 @@ function VacancyRecordManagement({
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-center px-4">
             <AlertCircle className="w-8 h-8 text-destructive" />
             <p className="text-sm font-semibold">Failed to load vacancies</p>
-            <Button
-                size="sm"
-                variant="outline"
-                className="rounded-xl"
-                onClick={() => refetch()}
-            >
+            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => refetch()}>
                 Retry
             </Button>
-
         </div>
     ) : isLoading ? (
         <MobileCardSkeleton count={query.limit} />
@@ -813,22 +610,13 @@ function VacancyRecordManagement({
             <p className="text-xs text-muted-foreground">Try adjusting the filters.</p>
         </div>
     ) : (
-        <div
-            className={cn(
-                "space-y-3 px-4 pb-4 transition-opacity duration-200",
-                isRefetching && "opacity-50 pointer-events-none"
-            )}
-        >
+        <div className={cn("space-y-2 px-4 pb-4", isRefetching && "opacity-50 pointer-events-none")}>
             {vacancies.map((vacancy) => (
                 <MobileVacancyCard
                     key={vacancy.id}
                     vacancy={vacancy}
                     teacher={teacher}
-                    onVisit={() =>
-                        router.push(
-                            `/teacher-portal/vacancy-records/${vacancy.vacancy_id}`
-                        )
-                    }
+                    onVisit={() => router.push(`/teacher-portal/vacancy-records/${vacancy.vacancy_id}`)}
                 />
             ))}
         </div>
@@ -837,156 +625,80 @@ function VacancyRecordManagement({
     return (
         <>
             {/* ════════════════════════════════════════════════════════════
-                MOBILE LAYOUT  (sm:hidden)
-
-                Structure:
-                  [header]           — sticky top
-                  [stats]            — scrolls with page
-                  [payment summary]  — scrolls with page
-                  [section label]
-                  [filter chips]
-                  [filter selects]
-                  [vacancy cards]    ← all inside overflow-auto
-                  [pagination]       — sits OUTSIDE scroll area, above tab bar
+                MOBILE LAYOUT (sm:hidden) - COMPACT VERSION WITH PAYMENT SUMMARY
             ════════════════════════════════════════════════════════════ */}
             <div className="sm:hidden flex flex-col bg-background min-h-0">
-
-                {/* ── Header ── */}
-                <div className="bg-card border-b border-border px-4 py-4 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary text-base font-bold shrink-0">
+                {/* Mini Header */}
+                <div className="bg-card border-b border-border px-3 py-2 shrink-0 flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
                             {teacher.name.charAt(0).toUpperCase()}
                         </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">
-                                My Vacancy Records
-                            </p>
-                            <h2 className="text-base font-bold text-foreground leading-tight truncate">
-                                {teacher.name}
-                            </h2>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                                <span className="text-[11px] text-muted-foreground truncate">
-                                    {teacher.email}
-                                </span>
-                                {teacher.phone && (
-                                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                                        <Phone className="w-3 h-3" />
-                                        {teacher.phone}
-                                    </span>
-                                )}
-                            </div>
+                        <div className="min-w-0">
+                            <h2 className="text-xs font-bold text-foreground truncate">{teacher.name}</h2>
+                            <p className="text-[9px] text-muted-foreground truncate">{teacher.phone}</p>
                         </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 rounded-xl p-0 text-muted-foreground hover:text-foreground shrink-0"
-                            onClick={() => refetch()}
-                            disabled={isLoading || isRefetching}
-                        >
-                            <RefreshCw
-                                className={cn("w-4 h-4", isRefetching && "animate-spin")}
-                            />
-                        </Button>
                     </div>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 rounded-lg p-0" onClick={() => refetch()} disabled={isLoading || isRefetching}>
+                        <RefreshCw className={cn("w-3 h-3", isRefetching && "animate-spin")} />
+                    </Button>
                 </div>
 
-                {/* ── Scrollable area: stats + filters + cards ── */}
-                {/*
-                    overflow-auto here lets the stats, filters and cards all scroll
-                    together as one natural page, while keeping the pagination bar
-                    below this div (outside the scroll) so it's always visible.
-                */}
+                {/* Compact Stats Row + Payment Summary */}
+                {!isLoading && stats && (
+                    <>
+                        <MiniStatsRow stats={stats} />
+                        <CompactPaymentSummary stats={stats} />
+                    </>
+                )}
+
+                {/* Scrollable Area */}
                 <div className="flex-1 overflow-auto min-h-0">
-
-                    {/* Stats: count grid + payment summary */}
-                    {isLoading ? (
-                        <MobileStatsSkeleton />
-                    ) : stats ? (
-                        <>
-                            <CountGrid stats={stats} />
-                            <PaymentSummaryCard stats={stats} />
-                        </>
-                    ) : null}
-
                     {/* Section label */}
-                    <div className="px-4 pt-4 pb-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                            Vacancies
-                            {!isLoading && (
-                                <span className="ml-1.5 normal-case tracking-normal font-normal">
-                                    · {total} total
-                                </span>
-                            )}
+                    <div className="px-4 pt-3 pb-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Vacancies · {total}
                         </p>
                     </div>
 
-                    {/* Vacancy status chips — horizontal scroll */}
-                    <div className="flex gap-2 px-4 pb-2 overflow-x-auto no-scrollbar">
-                        {(
-                            [
-                                "all",
-                                "open",
-                                "ongoing",
-                                "assigned",
-                                "completed",
-                                "cancelled",
-                            ] as const
-                        ).map((s) => (
+                    {/* Status chips */}
+                    <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto no-scrollbar">
+                        {(["all", "open", "ongoing", "assigned", "completed", "cancelled"] as const).map((s) => (
                             <button
                                 key={s}
-                                onClick={() =>
-                                    patchQuery({
-                                        vacancy_status: s as VacancyStatus | "all",
-                                    })
-                                }
+                                onClick={() => patchQuery({ vacancy_status: s as VacancyStatus | "all" })}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap transition-all",
+                                    "px-2.5 py-1 rounded-full text-[10px] font-medium border whitespace-nowrap transition-all",
                                     query.vacancy_status === s
                                         ? "bg-foreground text-background border-foreground"
                                         : "bg-card border-border text-muted-foreground"
                                 )}
                             >
-                                {s === "all"
-                                    ? "All"
-                                    : s.charAt(0).toUpperCase() + s.slice(1)}
+                                {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
                             </button>
                         ))}
                     </div>
 
-                    {/* Payment + page-size dropdowns */}
-                    <div className="flex gap-2 px-4 pb-3">
-                        <Select
-                            value={query.payment_status}
-                            onValueChange={(v) =>
-                                patchQuery({
-                                    payment_status: v as PaymentStatus | "all",
-                                })
-                            }
-                        >
-                            <SelectTrigger className="h-8 text-xs flex-1 rounded-xl border-border bg-card">
+                    {/* Filters row */}
+                    <div className="flex gap-2 px-4 pb-2">
+                        <Select value={query.payment_status} onValueChange={(v) => patchQuery({ payment_status: v as PaymentStatus | "all" })}>
+                            <SelectTrigger className="h-7 text-xs flex-1 rounded-lg border-border bg-card">
                                 <SelectValue placeholder="Payment" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl">
-                                <SelectItem value="all">All payments</SelectItem>
+                            <SelectContent className="rounded-lg">
+                                <SelectItem value="all">All</SelectItem>
                                 <SelectItem value="pending">Pending</SelectItem>
                                 <SelectItem value="partial">Partial</SelectItem>
                                 <SelectItem value="completed">Paid</SelectItem>
-                                <SelectItem value="failed">Failed</SelectItem>
                             </SelectContent>
                         </Select>
-
-                        <Select
-                            value={String(query.limit)}
-                            onValueChange={(v) => patchQuery({ limit: Number(v) })}
-                        >
-                            <SelectTrigger className="h-8 text-xs w-[95px] rounded-xl border-border bg-card">
+                        <Select value={String(query.limit)} onValueChange={(v) => patchQuery({ limit: Number(v) })}>
+                            <SelectTrigger className="h-7 text-xs w-[85px] rounded-lg border-border bg-card">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="rounded-xl">
+                            <SelectContent className="rounded-lg">
                                 {[5, 10, 15, 20].map((s) => (
-                                    <SelectItem key={s} value={String(s)}>
-                                        {s} / page
-                                    </SelectItem>
+                                    <SelectItem key={s} value={String(s)}>{s}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -996,30 +708,14 @@ function VacancyRecordManagement({
                     {mobileVacancyContent}
                 </div>
 
-                {/*
-                    Pagination sits OUTSIDE the scroll div so it is always
-                    anchored above the fixed bottom tab bar. The tab bar is
-                    ~72 px tall; the wrapper's pb-24 (set in
-                    TeacherPortalWrapper) gives the overall page clearance,
-                    but the pagination itself doesn't need extra padding
-                    because it's already outside the scroll area.
-                */}
-                <PaginationBar
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    total={total}
-                    isLoading={isLoading}
-                    onPageChange={handlePageChange}
-                />
+                {/* Pagination */}
+                <PaginationBar currentPage={currentPage} totalPages={totalPages} total={total} isLoading={isLoading} onPageChange={handlePageChange} />
             </div>
 
             {/* ════════════════════════════════════════════════════════════
-                DESKTOP LAYOUT  (hidden sm:flex)
-                Unchanged — single contained card with table.
+                DESKTOP LAYOUT (hidden sm:flex) - UNCHANGED
             ════════════════════════════════════════════════════════════ */}
             <div className="hidden sm:flex flex-col bg-background rounded-xl border border-border overflow-hidden shadow-sm min-h-0">
-
-                {/* ── Header ── */}
                 <div className="relative overflow-hidden border-b border-border bg-card px-6 py-5 shrink-0">
                     <div className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[radial-gradient(circle,#6366f118,transparent_70%)]" />
                     <div className="flex items-center justify-between gap-3">
@@ -1057,33 +753,15 @@ function VacancyRecordManagement({
                             onClick={() => refetch()}
                             disabled={isLoading || isRefetching}
                         >
-                            <RefreshCw
-                                className={cn(
-                                    "w-4 h-4",
-                                    isRefetching && "animate-spin"
-                                )}
-                            />
+                            <RefreshCw className={cn("w-4 h-4", isRefetching && "animate-spin")} />
                         </Button>
                     </div>
                 </div>
 
-                {/* ── Stats strip ── */}
-                {isLoading ? (
-                    <DesktopStatsSkeleton />
-                ) : stats ? (
-                    <StatsStrip stats={stats} />
-                ) : null}
+                {isLoading ? <DesktopStatsSkeleton /> : stats && <StatsStrip stats={stats} />}
 
-                {/* ── Filters ── */}
                 <div className="flex flex-wrap items-center gap-2 px-6 py-3 border-b border-border bg-muted/30 shrink-0">
-                    <Select
-                        value={query.vacancy_status}
-                        onValueChange={(v) =>
-                            patchQuery({
-                                vacancy_status: v as VacancyStatus | "all",
-                            })
-                        }
-                    >
+                    <Select value={query.vacancy_status} onValueChange={(v) => patchQuery({ vacancy_status: v as VacancyStatus | "all" })}>
                         <SelectTrigger className="h-8 text-xs w-[130px] rounded-xl border-border bg-card">
                             <SelectValue placeholder="Vacancy Status" />
                         </SelectTrigger>
@@ -1097,14 +775,7 @@ function VacancyRecordManagement({
                         </SelectContent>
                     </Select>
 
-                    <Select
-                        value={query.payment_status}
-                        onValueChange={(v) =>
-                            patchQuery({
-                                payment_status: v as PaymentStatus | "all",
-                            })
-                        }
-                    >
+                    <Select value={query.payment_status} onValueChange={(v) => patchQuery({ payment_status: v as PaymentStatus | "all" })}>
                         <SelectTrigger className="h-8 text-xs w-[130px] rounded-xl border-border bg-card">
                             <SelectValue placeholder="Payment Status" />
                         </SelectTrigger>
@@ -1117,100 +788,55 @@ function VacancyRecordManagement({
                         </SelectContent>
                     </Select>
 
-                    <Select
-                        value={String(query.limit)}
-                        onValueChange={(v) => patchQuery({ limit: Number(v) })}
-                    >
+                    <Select value={String(query.limit)} onValueChange={(v) => patchQuery({ limit: Number(v) })}>
                         <SelectTrigger className="h-8 text-xs w-[100px] rounded-xl border-border bg-card">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
                             {[5, 10, 15, 20].map((s) => (
-                                <SelectItem key={s} value={String(s)}>
-                                    {s} / page
-                                </SelectItem>
+                                <SelectItem key={s} value={String(s)}>{s} / page</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
 
-                    <span className="ml-auto text-xs text-muted-foreground">
-                        {!isLoading && `${total} total`}
-                    </span>
+                    <span className="ml-auto text-xs text-muted-foreground">{!isLoading && `${total} total`}</span>
                 </div>
 
-                {/* ── Table ── */}
                 <div className="flex-1 overflow-auto min-h-0">
                     {isError ? (
                         <div className="flex flex-col items-center justify-center gap-3 py-16 text-center px-4">
                             <AlertCircle className="w-8 h-8 text-destructive" />
-                            <p className="text-sm font-semibold">
-                                Failed to load vacancies
-                            </p>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="rounded-xl"
-                                onClick={() => refetch()}
-                            >
-                                Retry
-                            </Button>
+                            <p className="text-sm font-semibold">Failed to load vacancies</p>
+                            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => refetch()}>Retry</Button>
                         </div>
                     ) : isLoading ? (
                         <TableSkeleton rows={query.limit} />
                     ) : vacancies.length === 0 ? (
                         <div className="flex flex-col items-center justify-center gap-2 py-16 text-center px-4">
                             <GraduationCap className="w-8 h-8 text-muted-foreground/40" />
-                            <p className="text-sm font-semibold text-foreground">
-                                No vacancies found
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                Try adjusting the filters.
-                            </p>
+                            <p className="text-sm font-semibold text-foreground">No vacancies found</p>
+                            <p className="text-xs text-muted-foreground">Try adjusting the filters.</p>
                         </div>
                     ) : (
-                        <div
-                            className={cn(
-                                "transition-opacity duration-200",
-                                isRefetching && "opacity-50 pointer-events-none"
-                            )}
-                        >
+                        <div className={cn("transition-opacity duration-200", isRefetching && "opacity-50 pointer-events-none")}>
                             <Table>
                                 <TableHeader>
                                     <TableRow className="border-border hover:bg-transparent">
-                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                            Title / Subject
-                                        </TableHead>
-                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                            Location
-                                        </TableHead>
-                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                            Details
-                                        </TableHead>
-                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                            Status
-                                        </TableHead>
-                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                            Payment
-                                        </TableHead>
-                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground w-[130px]">
-                                            Progress
-                                        </TableHead>
-                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                            Salary
-                                        </TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Title / Subject</TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Location</TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Details</TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payment</TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground w-[130px]">Progress</TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Salary</TableHead>
                                         <TableHead className="w-20" />
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {vacancies.map((vacancy) => (
-                                        <TableRow
-                                            key={vacancy.id}
-                                            className="border-border hover:bg-muted/40 transition-colors"
-                                        >
+                                    {vacancies?.map((vacancy) => (
+                                        <TableRow key={vacancy.id} className="border-border hover:bg-muted/40 transition-colors">
                                             <TableCell>
-                                                <p className="text-sm font-semibold text-foreground leading-tight truncate max-w-[160px]">
-                                                    {vacancy.title}
-                                                </p>
+                                                <p className="text-sm font-semibold text-foreground leading-tight truncate max-w-[160px]">{vacancy.title}</p>
                                                 <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1 truncate max-w-[160px]">
                                                     <BookOpen className="w-3 h-3 shrink-0" />
                                                     {vacancy.subject}
@@ -1219,80 +845,30 @@ function VacancyRecordManagement({
                                             <TableCell>
                                                 <div className="flex items-start gap-1.5 text-xs text-muted-foreground max-w-[120px]">
                                                     <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
-                                                    <span className="truncate">
-                                                        {vacancy.location}
-                                                    </span>
+                                                    <span className="truncate">{vacancy.location}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="space-y-0.5 text-xs text-muted-foreground">
-                                                    <div className="flex items-center gap-1">
-                                                        <BookOpen className="w-3 h-3 shrink-0" />
-                                                        Grade {vacancy.grade}
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <Users className="w-3 h-3 shrink-0" />
-                                                        {vacancy.no_of_students} students
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <Clock className="w-3 h-3 shrink-0" />
-                                                        <span className="truncate max-w-[80px]">
-                                                            {vacancy.time}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <Hash className="w-3 h-3 shrink-0" />
-                                                        <span className="font-mono">
-                                                            {vacancy.code}
-                                                        </span>
-                                                    </div>
+                                                    <div className="flex items-center gap-1"><BookOpen className="w-3 h-3 shrink-0" />Grade {vacancy.grade}</div>
+                                                    <div className="flex items-center gap-1"><Users className="w-3 h-3 shrink-0" />{vacancy.no_of_students} students</div>
+                                                    <div className="flex items-center gap-1"><Clock className="w-3 h-3 shrink-0" /><span className="truncate max-w-[80px]">{vacancy.time}</span></div>
+                                                    <div className="flex items-center gap-1"><Hash className="w-3 h-3 shrink-0" /><span className="font-mono">{vacancy.code}</span></div>
                                                 </div>
                                             </TableCell>
+                                            <TableCell><VacancyStatusBadge status={vacancy.status} /></TableCell>
+                                            <TableCell><PaymentStatusBadge status={vacancy.payment_status} /></TableCell>
+                                            <TableCell><PaymentProgress vacancy={vacancy} /></TableCell>
                                             <TableCell>
-                                                <VacancyStatusBadge
-                                                    status={vacancy.status}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <PaymentStatusBadge
-                                                    status={vacancy.payment_status}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <PaymentProgress vacancy={vacancy} />
-                                            </TableCell>
-                                            <TableCell>
-                                                <p className="text-xs font-semibold text-foreground">
-                                                    Rs.{" "}
-                                                    {vacancy.salary.toLocaleString()}
-                                                </p>
-                                                {vacancy.salary_note && (
-                                                    <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[90px]">
-                                                        {vacancy.salary_note}
-                                                    </p>
-                                                )}
+                                                <p className="text-xs font-semibold text-foreground">Rs. {vacancy.salary.toLocaleString()}</p>
+                                                {vacancy.salary_note && <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[90px]">{vacancy.salary_note}</p>}
                                                 <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                                                     <Calendar className="w-3 h-3 shrink-0" />
-                                                    {new Date(
-                                                        vacancy.created_at
-                                                    ).toLocaleDateString("en-US", {
-                                                        month: "short",
-                                                        day: "numeric",
-                                                        year: "numeric",
-                                                    })}
+                                                    {new Date(vacancy.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                                                 </p>
                                             </TableCell>
                                             <TableCell>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-7 rounded-lg gap-1.5 text-xs font-semibold px-3 border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all"
-                                                    onClick={() =>
-                                                        router.push(
-                                                            `/teacher-portal/vacancy-records/${vacancy.vacancy_id}`
-                                                        )
-                                                    }
-                                                >
+                                                <Button size="sm" variant="outline" className="h-7 rounded-lg gap-1.5 text-xs font-semibold px-3 border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all" onClick={() => router.push(`/teacher-portal/vacancy-records/${vacancy.vacancy_id}`)}>
                                                     <ExternalLink className="w-3 h-3" />
                                                     Visit
                                                 </Button>
@@ -1304,15 +880,7 @@ function VacancyRecordManagement({
                         </div>
                     )}
                 </div>
-
-                {/* ── Desktop Pagination ── */}
-                <PaginationBar
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    total={total}
-                    isLoading={isLoading}
-                    onPageChange={handlePageChange}
-                />
+                <PaginationBar currentPage={currentPage} totalPages={totalPages} total={total} isLoading={isLoading} onPageChange={handlePageChange} />
             </div>
         </>
     );

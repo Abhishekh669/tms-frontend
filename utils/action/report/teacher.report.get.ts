@@ -1,12 +1,90 @@
-
-// actions/report.actions.ts
-
 "use server";
+
 
 import { get_cookies } from "@/utils/helper/get-cookies";
 import { getErrorMessage } from "@/utils/helper/get.error.message";
-import { GrowthData, GrowthTreand, OverAllTeacherReport, TeacherLocation, TeacherOverview, TeacherPerformanceList, TeacherReportQuery } from "@/utils/types/report.types";
+import { ActiveVacancyCard, ActiveVacancyDropdownItem, GrowthData, GrowthTreand, OverAllDasboardData, TeacherDashboardStats, TeacherLocation, TeacherOverview, TeacherPerformanceList, TeacherRank, TeacherReportQuery, VacancyWeeklyProgress } from "@/utils/types/report.types";
 import axios from "axios";
+
+export const getVacancyWeeklyPerformance = async(vacancy_id : string) =>{
+  try {
+    if(!vacancy_id)throw new Error("invalid vacancy")
+    const teacher_token = await get_cookies("teacher_token")
+   if (!teacher_token) {
+      throw new Error("unauthorized user");
+    }
+
+    const res = await axios.get(
+      `${process.env.NEXT_BACKEND_URL}/api/v1/teacher-report-service/weekly-progress/${vacancy_id}`,
+      {
+        headers: {
+           Cookie : `teacher_token=${teacher_token}`
+        },
+        withCredentials: true,
+      }
+    );
+
+     const data = res.data;
+    const payload   = data?.payload as VacancyWeeklyProgress;
+
+
+    if (!data?.success || !payload) {
+      throw new Error(data?.error || "failed to get teacher overview");
+    }
+    return {
+      success : true,
+      weekly_progress : payload
+    }
+
+
+
+  } catch (error) {
+    throw new Error(getErrorMessage(error))
+    
+  }
+}
+
+
+
+export const getTeacherVacancyReportData = async () => {
+  try {
+    const teacher_token = await get_cookies("teacher_token");
+
+    if (!teacher_token) {
+      throw new Error("unauthorized user");
+    }
+
+    const res = await axios.get(
+      `${process.env.NEXT_BACKEND_URL}/api/v1/teacher-report-service/overall-data`,
+      {
+        headers: {
+           Cookie : `teacher_token=${teacher_token}`
+        },
+        withCredentials: true,
+      }
+    );
+
+    const data = res.data;
+    const payload   = data?.payload as OverAllDasboardData;
+
+    if (!data?.success || !payload) {
+      throw new Error(data?.error || "failed to get teacher overview");
+    }
+
+    return {
+      success: true,
+      dashboard_stats : payload?.dashboard_stats as TeacherDashboardStats,
+      active_vacancy_card : payload?.active_vacancy_card as ActiveVacancyCard[],
+      active_vacancy_dropdown_item : payload?.active_vacancy_dropdown_item as ActiveVacancyDropdownItem[],
+      teacehr_ranking_data : payload?. teacher_ranking_data as TeacherRank
+    };
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+};
+
+
+
 
 
 export const getTeacherOverview = async () => {

@@ -22,6 +22,7 @@ import {
   BarChart2,
   Percent,
   CreditCard,
+  Phone,
 } from 'lucide-react';
 import {
   Pagination,
@@ -56,7 +57,7 @@ const paymentColors: Record<string, string> = {
 
 function PaymentBadge({ status }: { status: string }) {
   return (
-    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize", paymentColors[status] ?? paymentColors.pending)}>
+    <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize", paymentColors[status] ?? paymentColors.pending)}>
       {status}
     </span>
   );
@@ -74,15 +75,84 @@ const vacancyStatusColors: Record<string, string> = {
 
 function VacancyStatusBadge({ status }: { status: string }) {
   return (
-    <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold capitalize", vacancyStatusColors[status] ?? "bg-muted text-muted-foreground border-border")}>
+    <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold capitalize", vacancyStatusColors[status] ?? "bg-muted text-muted-foreground border-border")}>
       {status}
     </span>
   );
 }
 
-// ─── Vacancy Detail Card ──────────────────────────────────────────────────────
+// ─── Mobile Compact Vacancy Card ──────────────────────────────────────────────
 
-function VacancyDetailCard({ v }: { v: VacancyDataForVacancyRecords }) {
+function MobileCompactVacancyCard({ v }: { v: VacancyDataForVacancyRecords }) {
+  const paidPct = v.amount_to_be_paid > 0
+    ? Math.min(100, Math.round((v.payment_done / v.amount_to_be_paid) * 100))
+    : 0;
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+      {/* Compact header */}
+      <div className="px-3 pt-3 pb-2 border-b border-border flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-bold text-foreground truncate">{v.title}</h3>
+          <p className="text-[10px] text-muted-foreground truncate">{v.subject}</p>
+        </div>
+        <div className="flex gap-1 shrink-0">
+          <VacancyStatusBadge status={v.status} />
+          <PaymentBadge status={v.payment_status} />
+        </div>
+      </div>
+
+      {/* Compact info grid - 2 columns */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
+          <span className="text-[11px] text-foreground truncate">{v.location}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Users className="w-3 h-3 text-muted-foreground shrink-0" />
+          <span className="text-[11px] text-foreground">{v.no_of_students} std.</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <BookOpen className="w-3 h-3 text-muted-foreground shrink-0" />
+          <span className="text-[11px] text-foreground">Grade {v.grade}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
+          <span className="text-[11px] text-foreground truncate">{v.time}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-semibold text-muted-foreground">Rs.</span>
+          <span className="text-[11px] font-semibold text-foreground">{v.salary.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <CreditCard className="w-3 h-3 text-muted-foreground shrink-0" />
+          <span className="text-[11px] text-foreground">{v.commission_charge.toLocaleString()}</span>
+        </div>
+      </div>
+
+      {/* Compact payment bar */}
+      <div className="px-3 pb-3">
+        <div className="bg-muted/30 rounded-lg p-2 space-y-1">
+          <div className="flex items-center justify-between text-[9px]">
+            <span className="font-semibold text-muted-foreground">Payment</span>
+            <span className="font-bold text-foreground">{paidPct}%</span>
+          </div>
+          <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+            <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${paidPct}%` }} />
+          </div>
+          <div className="flex justify-between text-[9px]">
+            <span className="text-emerald-600">Paid: {fmtCurrency(v.payment_done)}</span>
+            <span className="text-amber-600">Due: {fmtCurrency(v.remaining_amount)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Desktop Vacancy Detail Card ──────────────────────────────────────────────
+
+function DesktopVacancyDetailCard({ v }: { v: VacancyDataForVacancyRecords }) {
   const paidPct = v.amount_to_be_paid > 0
     ? Math.min(100, Math.round((v.payment_done / v.amount_to_be_paid) * 100))
     : 0;
@@ -110,6 +180,7 @@ function VacancyDetailCard({ v }: { v: VacancyDataForVacancyRecords }) {
         <InfoItem icon={<Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />} label="Time" value={v.time} />
         <InfoItem icon={<span className='text-sm'>Rs</span>} label="Salary" value={fmtCurrency(v.salary)} />
         <InfoItem icon={<CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4" />} label="Commission" value={fmtCurrency(v.commission_charge)} />
+        <InfoItem icon={<Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />} label="Parent Number" value={v.contact_number} />
       </div>
 
       {/* Payment bar - responsive */}
@@ -224,7 +295,6 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
   });
 
   const { data, isLoading, error, refetch } = useGetTeacherVacancyRecordyById(query);
-  console.log("this is the data of the teacher : ", data)
 
   const vacancy = data?.vacancy_details;
   const records = data?.records ?? [];
@@ -241,7 +311,6 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
 
   const getVisiblePages = () => {
     const pages: number[] = [];
-    // Show more pages on desktop
     const pageRange = window.innerWidth >= 640 ? 2 : 1;
     const start = Math.max(0, currentPage - pageRange);
     const end = Math.min(totalPages - 1, currentPage + pageRange);
@@ -253,7 +322,7 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
     <>
       {/* Mobile view (max-width: 640px) */}
       <div className="block sm:hidden">
-        <div className="min-h-screen space-y-4 px-3 py-4 max-w-2xl mx-auto">
+        <div className="min-h-screen space-y-3 px-3 py-3 max-w-2xl mx-auto">
           {/* ── Add Record Dialog ── */}
           <AddVacancyRecordDialogBox
             open={open}
@@ -263,21 +332,22 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
             onSuccess={() => { refetch(); setOpen(false); }}
           />
 
-          {/* ── Vacancy Detail Card ── */}
+          {/* ── Mobile Compact Vacancy Card ── */}
           {isLoading ? (
-            <div className="rounded-2xl border border-border bg-card p-4 space-y-3 animate-pulse">
+            <div className="rounded-xl border border-border bg-card p-3 space-y-2 animate-pulse">
               <div className="flex justify-between">
-                <div className="h-5 w-40 rounded bg-muted" />
-                <div className="h-5 w-20 rounded-full bg-muted" />
+                <div className="h-4 w-32 rounded bg-muted" />
+                <div className="h-4 w-16 rounded-full bg-muted" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="h-8 rounded bg-muted" />
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-3 rounded bg-muted" />
                 ))}
               </div>
+              <div className="h-1 rounded bg-muted" />
             </div>
           ) : vacancy ? (
-            <VacancyDetailCard v={vacancy} />
+            <MobileCompactVacancyCard v={vacancy} />
           ) : null}
 
           {/* ── Stats ── */}
@@ -286,41 +356,41 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
           {/* ── Records Header ── */}
           <div className="flex items-center justify-between pt-1">
             <div>
-              <h3 className="text-sm font-bold text-foreground">Weekly Test Records</h3>
-              <p className="text-[11px] text-muted-foreground">{total} record{total !== 1 ? "s" : ""} total</p>
+              <h3 className="text-sm font-bold text-foreground">Test Records</h3>
+              <p className="text-[10px] text-muted-foreground">{total} record{total !== 1 ? "s" : ""} total</p>
             </div>
             <Button
               size="sm"
-              className="h-8 rounded-xl gap-1.5 text-xs font-semibold px-3"
+              className="h-7 rounded-lg gap-1 text-xs font-semibold px-2.5"
               onClick={() => setOpen(true)}
             >
-              <Plus className="w-3.5 h-3.5" />
-              Add Record
+              <Plus className="w-3 h-3" />
+              Add
             </Button>
           </div>
 
           {/* ── Records List ── */}
           {isLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => <RecordSkeleton key={i} />)}
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center rounded-2xl border border-border bg-card">
-              <AlertCircle className="w-7 h-7 text-destructive" />
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center rounded-xl border border-border bg-card">
+              <AlertCircle className="w-6 h-6 text-destructive" />
               <p className="text-sm font-semibold text-foreground">Failed to load records</p>
-              <Button size="sm" variant="outline" className="rounded-xl mt-1" onClick={() => refetch()}>Retry</Button>
+              <Button size="sm" variant="outline" className="rounded-lg mt-1" onClick={() => refetch()}>Retry</Button>
             </div>
           ) : records.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center rounded-2xl border border-dashed border-border bg-card/50">
-              <BookOpen className="w-7 h-7 text-muted-foreground/40" />
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center rounded-xl border border-dashed border-border bg-card/50">
+              <BookOpen className="w-6 h-6 text-muted-foreground/40" />
               <p className="text-sm font-semibold text-foreground">No records yet</p>
-              <p className="text-xs text-muted-foreground">Add the first weekly test record.</p>
-              <Button size="sm" className="rounded-xl mt-1 gap-1.5" onClick={() => setOpen(true)}>
-                <Plus className="w-3.5 h-3.5" />Add Record
+              <p className="text-xs text-muted-foreground">Add the first test record.</p>
+              <Button size="sm" className="rounded-lg mt-1 gap-1" onClick={() => setOpen(true)}>
+                <Plus className="w-3 h-3" />Add Record
               </Button>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {records.map((record) => (
                 <RecordCard key={record.id} record={record} onRefetch={refetch} />
               ))}
@@ -329,18 +399,18 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
 
           {/* ── Pagination ── */}
           {totalPages > 1 && (
-            <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-[11px] text-muted-foreground">
+            <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+              <div className="flex flex-col items-center gap-1.5">
+                <p className="text-[10px] text-muted-foreground">
                   Page {currentPage + 1} of {totalPages} · {total} total
                 </p>
                 <Pagination>
-                  <PaginationContent className="gap-1">
+                  <PaginationContent className="gap-0.5">
                     <PaginationItem>
                       <div className={cn(currentPage === 0 || isLoading ? "pointer-events-none opacity-35" : "")}>
                         <PaginationPrevious
                           href="#"
-                          className="h-8 rounded-xl text-xs border-border hover:bg-muted px-2"
+                          className="h-7 rounded-lg text-[10px] border-border hover:bg-muted px-2"
                           onClick={(e) => { e.preventDefault(); handlePageChange(currentPage - 1); }}
                         />
                       </div>
@@ -353,7 +423,7 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
                           <PaginationLink
                             href="#"
                             className={cn(
-                              "h-8 w-8 rounded-xl text-xs font-medium transition-all",
+                              "h-7 w-7 rounded-lg text-[10px] font-medium transition-all",
                               currentPage === actualPage
                                 ? "bg-primary text-primary-foreground border-primary shadow-sm"
                                 : "border-border hover:bg-muted text-muted-foreground"
@@ -370,7 +440,7 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
                       <div className={cn(currentPage >= totalPages - 1 || isLoading ? "pointer-events-none opacity-35" : "")}>
                         <PaginationNext
                           href="#"
-                          className="h-8 rounded-xl text-xs border-border hover:bg-muted px-2"
+                          className="h-7 rounded-lg text-[10px] border-border hover:bg-muted px-2"
                           onClick={(e) => { e.preventDefault(); handlePageChange(currentPage + 1); }}
                         />
                       </div>
@@ -383,7 +453,7 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
         </div>
       </div>
 
-      {/* Desktop view (min-width: 641px) */}
+      {/* Desktop view (min-width: 641px) - unchanged */}
       <div className="hidden sm:block min-h-screen bg-gradient-to-b from-background to-muted/20">
         <div className="container mx-auto px-6 py-8 max-w-7xl">
           {/* Header */}
@@ -401,7 +471,7 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
             onSuccess={() => { refetch(); setOpen(false); }}
           />
 
-          {/* ── Vacancy Detail Card ── */}
+          {/* ── Desktop Vacancy Detail Card ── */}
           {isLoading ? (
             <div className="rounded-2xl border border-border bg-card p-6 space-y-4 animate-pulse">
               <div className="flex justify-between">
@@ -415,7 +485,7 @@ function VacancyRecordsById({ teacher }: { teacher: SafeTokenTeacherData }) {
               </div>
             </div>
           ) : vacancy ? (
-            <VacancyDetailCard v={vacancy} />
+            <DesktopVacancyDetailCard v={vacancy} />
           ) : null}
 
           {/* ── Stats ── */}
