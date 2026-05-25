@@ -7,6 +7,67 @@ import { UpdateVacancyRecord } from "@/utils/types/vacancy.types"
 import axios from "axios"
 
 
+
+
+export interface CheckForgetPasswrodType {
+    
+    email: string;
+    pin : string;
+    token : string;
+    new_password : string;
+}
+
+export const checkForgetPasswordPin = async (checkindata : CheckForgetPasswrodType) => {
+    try {
+        const res = await axios.put(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/check-forget-password`, {
+            email: checkindata.email,
+            token: checkindata.token,
+            pin: checkindata.pin,
+            new_password: checkindata.new_password
+        })
+        const data = res.data;
+        if (!data?.success) {
+            throw new Error(data?.error || "Failed to verify pin");
+        }
+
+        return {
+            success: true,
+            message: data?.message || "Pin verified successfully"
+        }
+    } catch (error) {
+        return {
+            success : false,
+            error : getErrorMessage(error)
+        }
+    }
+}
+
+
+export const checkChangePasswordPin = async (checkindata : CheckForgetPasswrodType) => {
+    try {
+        const res = await axios.put(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/check-change-password`, {
+            email: checkindata.email,
+            token: checkindata.token,
+            pin: checkindata.pin,
+            new_password: checkindata.new_password
+        })
+        const data = res.data;
+        if (!data?.success) {
+            throw new Error(data?.error || "Failed to verify pin");
+        }
+
+        return {
+            success: true,
+            message: data?.message || "Pin verified successfully"
+        }
+    } catch (error) {
+        return {
+            success : false,
+            error : getErrorMessage(error)
+        }
+    }
+}
+
 export const updateTeacherVacancyRecord = async (recordData : UpdateVacancyRecord) =>{
     try {
           const user_token = await get_cookies("teacher_token")

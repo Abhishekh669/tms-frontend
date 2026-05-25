@@ -5,6 +5,68 @@ import { getErrorMessage } from "@/utils/helper/get.error.message";
 import axios from "axios";
 import { cookies } from "next/headers";
 
+
+export const createForgetPassword = async (email : string) =>{
+    try {
+        const response = await axios.post(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/create-forget-password-session`, {
+            email
+        })
+        const data = response.data;
+
+        const payload = data?.payload;
+        const token = payload?.token as string;
+
+        if (!data?.success || !token) {
+            throw new Error(data?.error || "Failed to create forget password session");
+        }
+
+        return {
+            success: true,
+            token,
+            message: data?.message || "Forget password session created successfully"
+        }
+    } catch (error) {
+            error = getErrorMessage(error);
+            return {
+                success: false,
+                error: String(error)
+            }
+    }
+}
+
+
+
+
+export const createChangePasswordSession = async (email : string) =>{
+    try {
+        const response = await axios.post(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/create-change-password-session`, {
+            email
+        })
+        const data = response.data;
+
+        const payload = data?.payload;
+        const token = payload?.token as string
+        if (!data?.success || !token) {
+            throw new Error(data?.error || "Failed to create forget password session");
+        }
+
+        return {
+            success: true,
+            token,
+            message: data?.message || "Forget password session created successfully"
+        }
+    } catch (error) {
+            error = getErrorMessage(error);
+            return {
+                success: false,
+                error: String(error)
+            }
+    }
+}
+
+
+
+
 export const createTeacherFrom = async (teacherData: TeacherPayload) => {
     try {
         const response = await axios.post(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/create-teacher-form`, teacherData)

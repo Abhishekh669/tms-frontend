@@ -9,39 +9,81 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-export const getTeacherVacancyRecords = async (query : TeacherVacancyRecordsQuery) =>{
+export const getForgetPasswordSession = async (email: string, token: string) => {
+  try {
+    const res = await axios.get(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/get-forget-password-session?email=${email}&token=${token}`)
+    const data = res.data;
+    const payload = data?.payload;
+    if (!data?.success || !payload) {
+      throw new Error(data?.error || "Failed to get forget password session");
+    }
+
+    return {
+      success: true,
+      message: data?.message || "Forget password session created successfully"
+    }
+  } catch (error) {
+    error = getErrorMessage(error);
+    console.log("Error in getForgetPasswordSession: ", error);
+    throw new Error(error as string)
+  }
+}
+
+export const getChangePasswordSession = async (email: string, token: string) => {
+  try {
+    const res = await axios.get(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/get-change-password-session?email=${email}&token=${token}`)
+    const data = res.data;
+    const payload = data?.payload;
+    if (!data?.success || !payload) {
+      throw new Error(data?.error || "Failed to get forget password session");
+    }
+
+    return {
+      success: true,
+      message: data?.message || "Forget password session created successfully"
+    }
+  } catch (error) {
+    error = getErrorMessage(error);
+    console.log("Error in getForgetPasswordSession: ", error);
+    throw new Error(error as string)
+  }
+}
+
+
+
+export const getTeacherVacancyRecords = async (query: TeacherVacancyRecordsQuery) => {
   const q = pickTeacherVacancyRecordsQuery(query);
-  try{
+  try {
     const teacher_token = await get_cookies("teacher_token");
-    if(!teacher_token){
+    if (!teacher_token) {
       throw new Error("unauthorized user");
     }
     const params = {
-      page : q.page,
-      limit : q.limit,
-      vacancy_id : q.vacancy_id
+      page: q.page,
+      limit: q.limit,
+      vacancy_id: q.vacancy_id
     }
-    const {data} = await axios.get(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/get-teacher-vacancy-records`,{
+    const { data } = await axios.get(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/get-teacher-vacancy-records`, {
       params,
-      headers : {
-        Cookie : `teacher_token=${teacher_token}`
+      headers: {
+        Cookie: `teacher_token=${teacher_token}`
       },
-      withCredentials : true
+      withCredentials: true
     })
-    const payload : VacancyRecordDataResponse= data?.payload;
-    if(!data?.success || !payload){
+    const payload: VacancyRecordDataResponse = data?.payload;
+    if (!data?.success || !payload) {
       throw new Error(data?.error || "failed to get vacancy records");
     }
     return {
-      success : true,
-      vacancy_details : payload?.vacancy_details,
-      records : payload?.records,
-      stats : payload?.stats,
-      total : payload?.total,
-      has_more : payload?.has_more,
-      next_offset : payload?.next_offset
+      success: true,
+      vacancy_details: payload?.vacancy_details,
+      records: payload?.records,
+      stats: payload?.stats,
+      total: payload?.total,
+      has_more: payload?.has_more,
+      next_offset: payload?.next_offset
     }
-  } catch(error){
+  } catch (error) {
     throw new Error(getErrorMessage(error));
   }
 }

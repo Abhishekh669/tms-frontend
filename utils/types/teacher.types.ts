@@ -6,21 +6,21 @@ export type TeacherStatus = 'vacant' | 'on_duty';
 export type GenderType =  "male" | "female" | "other"
 
 export interface SafeTokenTeacherData {
-  id: string; // UUID will be represented as string in TypeScript
+  id: string;
   name: string;
   gender: GenderType;
   email: string;
   phone: string;
-  cvLink: string;
-  transcriptLink: string;
-  additionLink?: string | null; // Optional and can be null
+  cv_link: string;
+  transcript_link: string;
+  addition_link?: string | null;
   location: string;
-  locationHint: string;
-  lat?: number | null; // Optional and can be null
-  long?: number | null; // Optional and can be null
+  location_hint: string;
+  lat?: number | null;
+  long?: number | null;
   status: TeacherStatus;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Teacher {

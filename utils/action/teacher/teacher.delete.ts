@@ -1,9 +1,16 @@
 'use server'
 
-import { get_cookies } from "@/utils/helper/get-cookies"
+import { delete_cookie, get_cookies } from "@/utils/helper/get-cookies"
 import { getErrorMessage } from "@/utils/helper/get.error.message"
 import axios from "axios"
 
+export const logOutUser = async (token_name : string) =>{
+    const res = await delete_cookie(token_name)
+    if (!res){
+        return false;
+    }
+    return true
+}
 
 
 export const deleteTeacherVacancyRecordsById = async (id: string) => {

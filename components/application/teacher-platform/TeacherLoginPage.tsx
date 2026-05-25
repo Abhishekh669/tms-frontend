@@ -50,7 +50,7 @@ function TeacherLoginCard() {
     setLoading(true);
 
     try {
-      const res = await loginTeacher(email, password);
+      const res = await loginTeacher(email.trim(), password.trim());
 
       if (!res.success) {
         toast.error(getErrorMessage(res.error) || "Invalid credentials");

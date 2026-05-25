@@ -1,6 +1,5 @@
 import DashboardManagementPage from '@/components/application/teacher-portal/dashboard/DashboardManagementPage';
 import { requireTeacherAuth } from '@/utils/action/teacher/teacher.get'
-import React from 'react'
 
 async function page() {
   const session = await requireTeacherAuth();
