@@ -58,7 +58,7 @@ function StatusBadge({ status }: { status: VacancyStatus }) {
   return <Badge variant="outline">{status}</Badge>;
 }
 
-function GetGenderText(gender : GenderType) {
+function GetGenderText(gender: GenderType) {
   switch (gender) {
     case "male":
       return "Male";
@@ -701,6 +701,7 @@ export default function VacancyManagementPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Code</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Subject</TableHead>
                 <TableHead>Location</TableHead>
@@ -719,6 +720,7 @@ export default function VacancyManagementPage() {
             <TableBody>
               {vacancies.map((v) => (
                 <TableRow key={v.id}>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{v.code}</TableCell>
                   <TableCell className="font-medium">{v.title}</TableCell>
                   <TableCell>
                     <div className="max-w-[160px] truncate" title={v.subject}>

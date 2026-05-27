@@ -136,7 +136,7 @@ function buildWhatsAppMessage(vacancy: VacancyTypeById, _user: UserType): string
         : "🧑‍🏫";
 
   return (
-    `🏫 HOME TUITION REQUIREMENT 🏫\n\n` +
+    `🏫 ${vacancy.title} 🏫\n\n` +
     `📌 Reference ID: ${vacancy.code}\n\n` +
     `📍 Location: ${vacancy.location}${vacancy.location_hint ? ` (${vacancy.location_hint})` : ""
     }\n` +
