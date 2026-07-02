@@ -86,6 +86,21 @@ export interface TeacherVacancyRecordsQuery{
   limit : number;
 }
 
+export interface TeacherVacancyRecordsForAdminQuery{
+  vacancy_id : string;
+  teacher_id : string;
+  page : number;
+  limit : number;
+}
+
+export function pickTeacherVacancyRecordsForAdminQuery(query: TeacherVacancyRecordsForAdminQuery): TeacherVacancyRecordsForAdminQuery {
+  return {
+    vacancy_id: String(query.vacancy_id),
+    teacher_id: String(query.teacher_id),
+    page: Number(query.page),
+    limit: Number(query.limit),
+  };
+}
 
 export function pickTeacherVacancyRecordsQuery(query: TeacherVacancyRecordsQuery): TeacherVacancyRecordsQuery {
   return {
@@ -239,3 +254,48 @@ export interface VacancyRecordDataResponse {
   next_offset : number;
 }
 
+
+
+
+
+
+//from here 
+
+export interface GetTeacherVacanciesRecordsByTeacherIdQuery {
+// UUID
+  payment_status?: PaymentStatus | "all";
+  vacancy_status?: VacancyStatus | "all";
+  phone ?: string;
+  page: number;
+  limit: number;
+}
+
+
+
+export interface VacancyCardData {
+  id: string; // UUID
+  title: string;
+  subject: string;
+  gender: GenderType;
+  location: string;
+  location_hint: string;
+  no_of_students: number;
+  grade: string;
+  salary: number;
+  status: VacancyStatus;
+  time: string;
+  contact_number: string;
+  payment_status: PaymentStatus;
+}
+
+export interface PaginationStats {
+  total: number;
+  has_more: boolean;
+  next_offset: number;
+}
+
+export interface TeacherVacanciesByTeacherIdResponse {
+  vacancies: VacancyCardData[];
+  teacher_data: SafeTokenTeacherData;
+  pagination: PaginationStats;
+}

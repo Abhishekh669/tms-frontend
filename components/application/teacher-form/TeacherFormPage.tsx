@@ -53,8 +53,8 @@ import { useRouter } from "next/navigation";
 const MapPicker = dynamic(() => import("./MapPicker"), { ssr: false });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 MB hard limit
-const MAX_FILE_LABEL = "2 MB";
+const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 MB hard limit
+const MAX_FILE_LABEL = "4 MB";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 const teacherSchema = z.object({

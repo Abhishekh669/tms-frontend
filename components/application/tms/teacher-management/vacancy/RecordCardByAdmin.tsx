@@ -34,8 +34,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { deleteTeacherVacancyRecordsById } from "@/utils/action/teacher/teacher.delete";
-import UpdateVacancyRecordDialog from "./UpdateVacancyRecordDialog";
+import {  deleteTeacherVacancyRecordsByIdByAdmin } from "@/utils/action/teacher/teacher.delete";
+import UpdateVacancyRecordDialogByAdmin from "./UpdateVacancyRecordByAdmin";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ function fmt(date: string) {
 
 // ─── Record Card ──────────────────────────────────────────────────────────────
 
-export function RecordCard({
+export function RecordCardByAdmin({
   record,
   onRefetch,
 }: {
@@ -67,7 +67,7 @@ export function RecordCard({
 
     try {
       // 1. Delete record from database first
-      const res = await deleteTeacherVacancyRecordsById(record.id);
+      const res = await deleteTeacherVacancyRecordsByIdByAdmin(record.id);
 
       if (!res.success) {
         throw new Error(res.error || "Failed to delete record");
@@ -123,7 +123,7 @@ export function RecordCard({
 
   return (
     <>
-      <UpdateVacancyRecordDialog
+      <UpdateVacancyRecordDialogByAdmin
         open={updateOpen}
         setOpen={setUpdateOpen}
         record={record}

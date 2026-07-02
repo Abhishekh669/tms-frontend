@@ -2,7 +2,7 @@ import VacancyManagementPage from '@/components/application/tms/vacancy/VacancyM
 import { requireAuth } from '@/utils/action/auth/auth.get'
 
 async function page() {
-  const session = await requireAuth();
+  await requireAuth();
   return <VacancyManagementPage />
 }
 

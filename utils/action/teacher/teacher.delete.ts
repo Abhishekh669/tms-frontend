@@ -12,6 +12,36 @@ export const logOutUser = async (token_name : string) =>{
     return true
 }
 
+export const deleteTeacherVacancyRecordsByIdByAdmin = async (id: string) => {
+    try {
+        const user_token = await get_cookies("user_token")
+        if (!user_token) {
+            throw new Error('unauthorized user')
+        }
+        const res = await axios.delete(
+            `${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/delete-teacher-vacancy-record-by-id-by-admin/${id}`,
+            {
+              headers: { Authorization: `Bearer ${user_token}` },
+                withCredentials: true,
+            }
+        );
+        const data =res.data;
+        if(!data?.success){
+            throw  new Error(data?.error || "failed to delete the vacancy record")
+        }
+        return {
+            success : true,
+            message : "succesfully deleted vacancy records"
+        }
+    } catch (error) {
+        return {
+            success: false,
+            error: getErrorMessage(error)
+        }
+
+    }
+}
+
 
 export const deleteTeacherVacancyRecordsById = async (id: string) => {
     try {

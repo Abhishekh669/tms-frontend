@@ -14,20 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Upload, X, ChevronLeft, CalendarIcon, ImageIcon } from "lucide-react";
+import { Loader2, Upload, X, ChevronLeft,  ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadThing } from "@/utils/uploadthing/uploadthing.client";
 import { getErrorMessage } from "@/utils/helper/get.error.message";
 import { removeMultipleImages } from "@/utils/action/uploadthing/delete.image";
 import { VacancyRecordType } from "@/utils/types/teacher.types";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { format } from "date-fns";
-import { updateTeacherVacancyRecord } from "@/utils/action/teacher/teacher.put";
+
+import { updateTeacherVacancyRecord, updateTeacherVacancyRecordByAdmin } from "@/utils/action/teacher/teacher.put";
 import { UpdateVacancyRecord } from "@/utils/types/vacancy.types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -158,7 +152,7 @@ function FileDropZone({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function UpdateVacancyRecordDialog({
+export default function UpdateVacancyRecordDialogByAdmin({
   open,
   setOpen,
   record,
@@ -312,7 +306,7 @@ export default function UpdateVacancyRecordDialog({
         image_link: imageLink,
       };
 
-      const result = await updateTeacherVacancyRecord(payload);
+      const result = await updateTeacherVacancyRecordByAdmin(payload);
       if (!result.success) throw new Error(result.error || "Update failed");
       
       toast.success("Record updated successfully!");

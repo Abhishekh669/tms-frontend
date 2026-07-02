@@ -1,13 +1,95 @@
 'use server'
 
 import { getErrorMessage } from "@/utils/helper/get.error.message"
-import { pickTeacherQuery, pickTeacherVacancyQuery, pickTeacherVacancyRecordsQuery, SafeTokenTeacherData, Teacher, TeacherQuery, TeachersListResponse, TeacherVacancyQuery, TeacherVacancyRecordsQuery, TeacherVacancyResponse, VacancyDataForVacancyRecords, VacancyRecordDataResponse } from "@/utils/types/teacher.types"
+import { GetTeacherVacanciesRecordsByTeacherIdQuery, PaginationStats, pickTeacherQuery, pickTeacherVacancyQuery, pickTeacherVacancyRecordsForAdminQuery, pickTeacherVacancyRecordsQuery, SafeTokenTeacherData, Teacher, TeacherQuery, TeachersListResponse, TeacherVacanciesByTeacherIdResponse, TeacherVacancyQuery, TeacherVacancyRecordsForAdminQuery, TeacherVacancyRecordsQuery, TeacherVacancyRecordStats, TeacherVacancyResponse, VacancyCardData, VacancyDataForVacancyRecords, VacancyRecordDataResponse, VacancyRecordType } from "@/utils/types/teacher.types"
 import { get_cookies } from "@/utils/helper/get-cookies";
 import axios from "axios";
 import { TeacherVacancyData, } from "@/utils/types/vacancy.types";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+
+export const getTeacherVacancyRecordsForAdmin = async (query: TeacherVacancyRecordsForAdminQuery) => {
+  const q = pickTeacherVacancyRecordsForAdminQuery(query);
+  try {
+    const user_token = await get_cookies("user_token");
+    if (!user_token) {
+      throw new Error("unauthorized user");
+    }
+    const params = {
+      page: q.page,
+      limit: q.limit,
+      vacancy_id: q.vacancy_id,
+      teacher_id: q.teacher_id
+    }
+    const { data } = await axios.get(`${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/get-teacher-vacancy-records-for-admin`, {
+      params,
+      headers: { Authorization: `Bearer ${user_token}` },
+      withCredentials: true
+    })
+    const payload: VacancyRecordDataResponse = data?.payload;
+    if (!data?.success || !payload) {
+      throw new Error(data?.error || "failed to get vacancy records");
+    }
+    return {
+      success: true as boolean,
+      vacancy_details: payload?.vacancy_details as VacancyDataForVacancyRecords,
+      records: payload?.records as VacancyRecordType[],
+      stats: payload?.stats as TeacherVacancyRecordStats,
+      total: payload?.total as number,
+      has_more: payload?.has_more as boolean,
+      next_offset: payload?.next_offset as number
+    }
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+}
+
+
+
+
+export const getTeacherVacancyRecordsByTeacherId = async (teacherId: string, query: GetTeacherVacanciesRecordsByTeacherIdQuery
+) => {
+  try {
+    if (!teacherId) throw new Error("teacher id is required");
+
+    const user_token = await get_cookies("user_token");
+    if (!user_token) throw new Error("unauthorized user");
+
+    const res = await axios.get(
+      `${process.env.NEXT_BACKEND_URL}/api/v1/teacher-service/get-teacher-vacancies-by-teacher-id`,
+      {
+        params: {
+          teacher_id: teacherId,
+          page: query.page,
+          limit: query.limit,
+          phone: query.phone || "",
+          payment_status: query.payment_status === "all" ? "" : query.payment_status || "",
+          vacancy_status: query.vacancy_status === "all" ? "" : query.vacancy_status || "",
+        },
+        headers: {
+          Authorization: `Bearer ${user_token}`,
+        },
+        withCredentials: true,
+      }
+    );
+
+    const data = res.data;
+    const payload: TeacherVacanciesByTeacherIdResponse = data?.payload;
+
+    if (!data?.success || !payload) throw new Error(data?.error || "failed to get teacher vacancies records");
+
+    return {
+      success: true as boolean,
+      vacancies: payload?.vacancies as VacancyCardData[],
+      teacher_data: payload?.teacher_data as SafeTokenTeacherData,
+      pagination: payload?.pagination as PaginationStats,
+    };
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+};
+
 
 export const getForgetPasswordSession = async (email: string, token: string) => {
   try {
@@ -51,6 +133,9 @@ export const getChangePasswordSession = async (email: string, token: string) => 
 
 
 
+
+
+
 export const getTeacherVacancyRecords = async (query: TeacherVacancyRecordsQuery) => {
   const q = pickTeacherVacancyRecordsQuery(query);
   try {
@@ -75,13 +160,13 @@ export const getTeacherVacancyRecords = async (query: TeacherVacancyRecordsQuery
       throw new Error(data?.error || "failed to get vacancy records");
     }
     return {
-      success: true,
-      vacancy_details: payload?.vacancy_details,
-      records: payload?.records,
-      stats: payload?.stats,
-      total: payload?.total,
-      has_more: payload?.has_more,
-      next_offset: payload?.next_offset
+      success: true as boolean,
+      vacancy_details: payload?.vacancy_details as VacancyDataForVacancyRecords,
+      records: payload?.records as VacancyRecordType[],
+      stats: payload?.stats as TeacherVacancyRecordStats,
+      total: payload?.total as number,
+      has_more: payload?.has_more as boolean,
+      next_offset: payload?.next_offset as number
     }
   } catch (error) {
     throw new Error(getErrorMessage(error));

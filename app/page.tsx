@@ -306,6 +306,21 @@ function Hero() {
                 </svg>
               </Link>
             </Button>
+
+             <Button
+              asChild
+              size="lg"
+              className="rounded-full bg-blue-600 text-xl hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 shadow-lg shadow-blue-200 dark:shadow-blue-900 gap-2 font-bold w-full sm:w-auto justify-center h-14"
+              style={baloo}
+            >
+              <Link href="/teacher-login">
+                Login as Tutor
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </Button>
+
             <Button
               asChild
               size="lg"

@@ -19,11 +19,10 @@ import { toast } from "sonner";
 import { Loader2, FileImage, AlertCircle, Upload, X, ChevronLeft, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUploadThing } from "@/utils/uploadthing/uploadthing.client";
-import { createVacancyRecords } from "@/utils/action/vacancy/vacancy.post";
+import { createVacancyRecords, createVacancyRecordsByAdmin } from "@/utils/action/vacancy/vacancy.post";
 import { getErrorMessage } from "@/utils/helper/get.error.message";
 import { removeMultipleImages } from "@/utils/action/uploadthing/delete.image";
 import { CreateVacancyRecord } from "@/utils/types/vacancy.types";
-import { SafeTokenTeacherData } from "@/utils/types/teacher.types";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -33,7 +32,7 @@ import {
 import { format } from "date-fns";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const MAX_FILE_BYTES = 4 * 1024 * 1024; // 2 MB
+const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 MB
 const MAX_FILE_LABEL = "4 MB";
 const STORAGE_KEY = "vacancy-record-draft";
 const IMAGE_UPLOAD_KEY = "vacancy-record-image";
@@ -63,7 +62,7 @@ type VacancyRecordFormValues = z.infer<typeof vacancyRecordSchema>;
 interface AddVacancyRecordDialogBoxProps {
   open: boolean;
   setOpen: (open: boolean) => void;
-  teacher: SafeTokenTeacherData;
+  teacherId: string;
   vacancyId: string;
   onSuccess?: () => void;
 }
@@ -175,10 +174,10 @@ function FileDropZone({
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-export default function AddVacancyRecordDialogBox({
+export default function AddVacancyRecordsByAdmin({
   open,
   setOpen,
-  teacher,
+  teacherId,
   vacancyId,
   onSuccess,
 }: AddVacancyRecordDialogBoxProps) {
@@ -204,7 +203,7 @@ export default function AddVacancyRecordDialogBox({
       full_marks: 100,
       pass_marks: 40,
       student_mark: 0,
-      teacher_id: teacher?.id || "",
+      teacher_id: teacherId || "",
     },
   });
 
@@ -223,7 +222,7 @@ export default function AddVacancyRecordDialogBox({
             full_marks: full_marks || 100,
             pass_marks: pass_marks || 40,
             student_mark: student_mark || 0,
-            teacher_id: teacher?.id || "",
+            teacher_id: teacherId || "",
           });
         } catch (_) {}
       }
@@ -239,7 +238,7 @@ export default function AddVacancyRecordDialogBox({
         } catch (_) {}
       }
     }
-  }, [open, form, vacancyId, teacher?.id]);
+  }, [open, form, vacancyId, teacherId]);
 
   // ─── Persist form data on change (only non-vacancy/teacher fields) ──────
   useEffect(() => {
@@ -390,10 +389,10 @@ export default function AddVacancyRecordDialogBox({
         pass_marks: values.pass_marks,
         student_mark: values.student_mark,
         image_link: imageLink!,
-        teacher_id: teacher?.id || "",
+        teacher_id: teacherId || "",
       };
 
-      const result = await createVacancyRecords(payload);
+      const result = await createVacancyRecordsByAdmin(payload);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to create vacancy record");
@@ -411,7 +410,7 @@ export default function AddVacancyRecordDialogBox({
         full_marks: 100,
         pass_marks: 40,
         student_mark: 0,
-        teacher_id: teacher?.id || "",
+        teacher_id: teacherId || "",
       });
       setImageFile(null);
       setImagePreview("");
@@ -453,7 +452,7 @@ export default function AddVacancyRecordDialogBox({
       full_marks: 100,
       pass_marks: 40,
       student_mark: 0,
-      teacher_id: teacher?.id || "",
+      teacher_id: teacherId || "",
     });
     setImageFile(null);
     setImagePreview("");
@@ -488,26 +487,16 @@ export default function AddVacancyRecordDialogBox({
             <DialogTitle>Create Vacancy Record</DialogTitle>
           </div>
           <DialogDescription className="text-xs sm:text-sm mt-1">
-            Fill in the details to create a new vacancy record for{" "}
-            <span className="font-medium text-foreground">{teacher?.name || "teacher"}</span>.
+            Fill in the details to create a new vacancy record 
           </DialogDescription>
         </div>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5 py-2">
           {/* Hidden fields */}
           <input type="hidden" {...form.register("vac_id")} value={vacancyId} />
-          <input type="hidden" {...form.register("teacher_id")} value={teacher?.id || ""} />
+          <input type="hidden" {...form.register("teacher_id")} value={teacherId || ""} />
 
-          {/* Teacher Name Display */}
-          <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase tracking-widest text-foreground/60">
-              Teacher
-            </Label>
-            <div className="p-3 sm:p-4 rounded-xl bg-muted/30 border border-border/60">
-              <div className="font-medium text-sm sm:text-base">{teacher?.name || "Unknown"}</div>
-              <div className="text-xs text-muted-foreground mt-1">{teacher?.email || "No email"}</div>
-            </div>
-          </div>
+          
 
           {/* Subject Field */}
           <div className="space-y-1.5">
